@@ -22,6 +22,7 @@ const navigation = [
   { name: 'Estoque', href: '/inventory', icon: Package },
   { name: 'Fluxo de Caixa', href: '/cashflow', icon: DollarSign },
   { name: 'Colaboradores', href: '/collaborators', icon: Users },
+  { name: 'Clientes', href: '/clients', icon: Users },
 ]
 
 export default function Sidebar() {

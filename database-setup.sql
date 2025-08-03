@@ -65,6 +65,12 @@ CREATE TABLE cashflow (
   appointment_id UUID REFERENCES appointments(id)
 );
 
+CREATE TABLE client (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  client_name TEXT NOT NULL,
+  cliente_phone TEXT NOT NULL
+);
+
 -- =====================================================
 -- DADOS DE EXEMPLO
 -- =====================================================

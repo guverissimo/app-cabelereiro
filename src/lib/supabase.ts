@@ -1,7 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+// const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+// const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+
+const supabaseUrl = "https://phnvurlqgpiaefrewzms.supabase.co"
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBobnZ1cmxxZ3BpYWVmcmV3em1zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM3NTAwMDUsImV4cCI6MjA2OTMyNjAwNX0.8JSv_ANpm31ijWrEpUEJ2Di-mjBzIJWtMBXXS7cPO5s"
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
@@ -62,3 +65,9 @@ export interface Cashflow {
   category: string
   appointment_id?: string
 } 
+
+export interface Client {
+  id: string
+  client_name: string
+  client_phone: string
+}
