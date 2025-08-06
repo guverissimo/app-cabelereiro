@@ -8,37 +8,82 @@ const updateClientSchema = z.object({
     client_phone: z.string().optional(),
 })
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(
+    req: NextRequest,
+    { params }: { params: { id: string } }
+) {
     try {
-        const clientId = params.id;
-        const body = await req.json();
+        const clientId = params.id
+        const body = await req.json()
 
-        const valid = updateClientSchema.parse(body);
+        const validatedData = updateClientSchema.parse(body)
 
-        const update = await prisma.client.update({
+        const existingClient = await prisma.client.findUnique({
             where: { id: clientId },
-            data: valid
         })
-        return NextResponse.json(update)
-    } catch (error) {
-        if (error instanceof z.ZodError) {
-            return NextResponse.json({ error: "Erro de validação", issues: error.errors }, { status: 400 });
+
+        if (!existingClient) {
+            return NextResponse.json(
+                { error: 'Cliente não encontrado' },
+                { status: 404 }
+            )
         }
 
-        console.error("Erro ao atualizar cliente:", error);
-        return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 });
+        const updatedClient = await prisma.client.update({
+            where: { id: clientId },
+            data: validatedData,
+        })
+
+        return NextResponse.json(updatedClient, { status: 200 })
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            return NextResponse.json(
+                { error: 'Erro de validação', issues: error.format() },
+                { status: 400 }
+            )
+        }
+
+        console.error('[PATCH_CLIENT_ERROR]', error)
+
+        return NextResponse.json(
+            { error: 'Erro interno do servidor' },
+            { status: 500 }
+        )
     }
 }
 
-export async function DELETE(_: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+    _: NextRequest,
+    { params }: { params: { id: string } }
+) {
+    const clientId = params.id
+
     try {
-        const existing = await prisma.client.findUnique({ where: { id: params.id } })
-        if (!existing) {
-            return NextResponse.json({ error: "Cliente não encontrado" }, { status: 404 });
+        const existingClient = await prisma.client.findUnique({
+            where: { id: clientId },
+        })
+
+        if (!existingClient) {
+            return NextResponse.json(
+                { error: 'Cliente não encontrado.' },
+                { status: 404 }
+            )
         }
-        await prisma.client.delete({ where: { id: params.id } });
-        return NextResponse.json({ message: "Cliente deletado com sucesso" }, { status: 200 });
+
+        await prisma.client.delete({
+            where: { id: clientId },
+        })
+
+        return NextResponse.json(
+            { message: 'Cliente deletado com sucesso.' },
+            { status: 200 }
+        )
     } catch (error) {
-        return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 });
+        console.error('[DELETE_CLIENT_ERROR]', error)
+
+        return NextResponse.json(
+            { error: 'Erro interno do servidor.' },
+            { status: 500 }
+        )
     }
 }

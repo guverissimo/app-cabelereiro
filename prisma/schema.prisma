@@ -25,7 +25,7 @@ model Collaborator {
   id         String   @id @default(uuid())
   name       String
   role       String
-  email      String
+  email      String   @unique
   created_at DateTime @default(now())
 }
 

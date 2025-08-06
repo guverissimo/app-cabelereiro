@@ -14,38 +14,42 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
     try {
-        const body = await req.json();
+        const body = await req.json()
+
+        const validatedData = clientSchema.parse(body)
 
         const existingClient = await prisma.client.findFirst({
-            where: { client_phone: body.client_phone },
-        });
+            where: { client_phone: validatedData.client_phone },
+        })
 
         if (existingClient) {
             return NextResponse.json(
                 { error: 'Já existe um cliente com esse telefone.' },
-                { status: 409 } // ← status 409: conflito
-            );
+                { status: 409 }
+            )
         }
 
-        const valid = clientSchema.parse(body);
         const client = await prisma.client.create({
-            data: valid,
+            data: validatedData,
         })
+
         return NextResponse.json(client, { status: 201 })
     } catch (error) {
         if (error instanceof z.ZodError) {
             return NextResponse.json(
-                { error: "Erro de validação", issues: error.errors },
+                {
+                    error: 'Erro de validação',
+                    issues: error.format(), 
+                },
                 { status: 400 }
-            );
+            )
         }
-        console.log(error);
+
+        console.error('[POST_CLIENT_ERROR]', error)
 
         return NextResponse.json(
-            { error: "Erro interno do servidor" },
-            {
-                status: 500
-            },
-        );
+            { error: 'Erro interno do servidor' },
+            { status: 500 }
+        )
     }
 }

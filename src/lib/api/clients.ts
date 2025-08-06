@@ -1,10 +1,10 @@
-import { NextResponse } from "next/server";
+import { Client } from "@/types/cliente";
 
 export const getClients = async () => {
     try {
         const res = await fetch('/api/clients');
         if (!res.ok) throw new Error('Erro ao buscar clientes');
-        return res.json();
+        return await res.json();
     } catch (error) {
         console.error(error);
         throw new Error('Erro ao buscar clientes');
@@ -14,7 +14,7 @@ export const getClients = async () => {
 export const getClientByPhone = async (client_phone: string) => {
     try {
         const res = await fetch(`/api/clients/client_phone?value=${client_phone}`)
-        return res.json();
+        return await res.json();
     } catch (error) {
         throw new Error('Erro ao buscar o cliente');
     }

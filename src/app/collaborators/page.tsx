@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { Plus, Users, Edit, Trash2, Mail, User } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import type { Collaborator } from '@/lib/supabase'
+import { createCollaborator, getCollaborators } from '@/lib/api/collaborators'
+import { toast } from 'react-toastify'
 
 export default function CollaboratorsPage() {
   const [collaborators, setCollaborators] = useState<Collaborator[]>([])
@@ -11,16 +13,17 @@ export default function CollaboratorsPage() {
   const [editingCollaborator, setEditingCollaborator] = useState<Collaborator | null>(null)
 
   const [formData, setFormData] = useState({
+    id: '',
     name: '',
     role: '',
     email: ''
   })
 
   useEffect(() => {
-    loadCollaborators()
+    handleGetCollaborators()
   }, [])
 
-  const loadCollaborators = async () => {
+  const loadCollaboratorsSupaBase = async () => {
     try {
       const { data } = await supabase
         .from('collaborators')
@@ -31,6 +34,26 @@ export default function CollaboratorsPage() {
       console.error('Erro ao carregar colaboradores:', error)
     }
   }
+
+  const handleGetCollaborators = async () => {
+    try {
+      const data = await toast.promise(
+        getCollaborators(), // <- sem toast interno
+        {
+          pending: 'Buscando colaboradores...',
+          success: 'Colaboradores carregados!',
+          error: {
+            render({ data }) {
+              return data?.message || 'Erro ao buscar colaboradores';
+            },
+          },
+        }
+      );
+      setCollaborators(data);
+    } catch (err) {
+      console.error('Erro técnico:', err);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,21 +66,35 @@ export default function CollaboratorsPage() {
 
         if (error) throw error
       } else {
-        const { error } = await supabase
-          .from('collaborators')
-          .insert([formData])
+        // const { error } = await supabase
+        //   .from('collaborators')
+        //   .insert([formData])
 
-        if (error) throw error
+        // if (error) throw error
+
+        const create = toast.promise(
+          createCollaborator(formData),
+          {
+            pending: 'Cadastrando...',
+            success: 'Collaborador cadastrado!',
+            error: {
+              render({ data }) {
+                return data?.message || 'Erro ao cadastrar Colaborador';
+              },
+            },
+          }
+        )
       }
 
       setFormData({
+        id: '',
         name: '',
         role: '',
         email: ''
       })
       setEditingCollaborator(null)
       setShowForm(false)
-      loadCollaborators()
+      handleGetCollaborators()
     } catch (error) {
       console.error('Erro ao salvar colaborador:', error)
     }
@@ -66,6 +103,7 @@ export default function CollaboratorsPage() {
   const handleEdit = (collaborator: Collaborator) => {
     setEditingCollaborator(collaborator)
     setFormData({
+      id: collaborator.id,
       name: collaborator.name,
       role: collaborator.role,
       email: collaborator.email
@@ -82,7 +120,7 @@ export default function CollaboratorsPage() {
           .eq('id', id)
 
         if (error) throw error
-        loadCollaborators()
+        handleGetCollaborators()
       } catch (error) {
         console.error('Erro ao excluir colaborador:', error)
       }
@@ -154,7 +192,7 @@ export default function CollaboratorsPage() {
                   required
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Função
@@ -167,7 +205,7 @@ export default function CollaboratorsPage() {
                   required
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Email
@@ -180,7 +218,7 @@ export default function CollaboratorsPage() {
                   required
                 />
               </div>
-              
+
               <div className="flex gap-2 pt-4">
                 <button
                   type="submit"
