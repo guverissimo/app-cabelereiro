@@ -19,9 +19,9 @@ export default function AppWrapper({ children }: AppWrapperProps) {
   // Para outras páginas, mostrar com sidebar e proteção
   return (
     <ProtectedRoute>
-      <div className="flex h-screen bg-gray-100">
+      <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
         <Sidebar />
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
           {children}
         </main>
       </div>

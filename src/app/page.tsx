@@ -12,6 +12,7 @@ import { getAppointments } from '@/lib/api/appointments'
 import { getCollaborators } from '@/lib/api/collaborators'
 import { getInventory } from '@/lib/api/inventory'
 import { getCashflow } from '@/lib/api/cashflow'
+import { useTheme } from '@/contexts/ThemeContext'
 import { toast } from 'react-toastify'
 
 interface ChartData {
@@ -34,6 +35,8 @@ export default function Dashboard() {
     totalExpenses: 0,
     balance: 0
   })
+
+  const { colors } = useTheme()
 
   useEffect(() => {
     loadDashboardData()
@@ -97,62 +100,139 @@ export default function Dashboard() {
     }
   }
 
-  const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#ff0000']
+  const COLORS = [colors.primary, colors.success, colors.warning, colors.accent, colors.secondary]
 
   return (
     <div className="p-6">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">Dashboard</h1>
+      <h1 
+        className="text-3xl font-bold mb-8"
+        style={{ color: colors.text }}
+      >
+        Dashboard
+      </h1>
       
       {/* Cards de estatísticas */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-lg shadow-md">
+        <div 
+          className="p-6 rounded-lg shadow-md"
+          style={{ backgroundColor: colors.surface }}
+        >
           <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Users className="h-6 w-6 text-blue-600" />
+            <div 
+              className="p-2 rounded-lg"
+              style={{ backgroundColor: `${colors.primary}20` }}
+            >
+              <Users 
+                className="h-6 w-6" 
+                style={{ color: colors.primary }}
+              />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Clientes Atendidos</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.totalClients}</p>
+              <p 
+                className="text-sm font-medium"
+                style={{ color: colors.textSecondary }}
+              >
+                Clientes Atendidos
+              </p>
+              <p 
+                className="text-2xl font-bold"
+                style={{ color: colors.text }}
+              >
+                {stats.totalClients}
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-md">
+        <div 
+          className="p-6 rounded-lg shadow-md"
+          style={{ backgroundColor: colors.surface }}
+        >
           <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <DollarSign className="h-6 w-6 text-green-600" />
+            <div 
+              className="p-2 rounded-lg"
+              style={{ backgroundColor: `${colors.success}20` }}
+            >
+              <DollarSign 
+                className="h-6 w-6" 
+                style={{ color: colors.success }}
+              />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Faturamento Total</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p 
+                className="text-sm font-medium"
+                style={{ color: colors.textSecondary }}
+              >
+                Faturamento Total
+              </p>
+              <p 
+                className="text-2xl font-bold"
+                style={{ color: colors.text }}
+              >
                 R$ {stats.totalRevenue.toLocaleString('pt-BR')}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-md">
+        <div 
+          className="p-6 rounded-lg shadow-md"
+          style={{ backgroundColor: colors.surface }}
+        >
           <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Package className="h-6 w-6 text-purple-600" />
+            <div 
+              className="p-2 rounded-lg"
+              style={{ backgroundColor: `${colors.accent}20` }}
+            >
+              <Package 
+                className="h-6 w-6" 
+                style={{ color: colors.accent }}
+              />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Valor em Estoque</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p 
+                className="text-sm font-medium"
+                style={{ color: colors.textSecondary }}
+              >
+                Valor em Estoque
+              </p>
+              <p 
+                className="text-2xl font-bold"
+                style={{ color: colors.text }}
+              >
                 R$ {stats.totalInventory.toLocaleString('pt-BR')}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-md">
+        <div 
+          className="p-6 rounded-lg shadow-md"
+          style={{ backgroundColor: colors.surface }}
+        >
           <div className="flex items-center">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <CheckCircle className="h-6 w-6 text-orange-600" />
+            <div 
+              className="p-2 rounded-lg"
+              style={{ backgroundColor: `${colors.warning}20` }}
+            >
+              <CheckCircle 
+                className="h-6 w-6" 
+                style={{ color: colors.warning }}
+              />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Agendamentos Concluídos</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.completedAppointments}</p>
+              <p 
+                className="text-sm font-medium"
+                style={{ color: colors.textSecondary }}
+              >
+                Agendamentos Concluídos
+              </p>
+              <p 
+                className="text-2xl font-bold"
+                style={{ color: colors.text }}
+              >
+                {stats.completedAppointments}
+              </p>
             </div>
           </div>
         </div>
@@ -160,21 +240,44 @@ export default function Dashboard() {
 
       {/* Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Faturamento por Colaborador</h3>
+        <div 
+          className="p-6 rounded-lg shadow-md"
+          style={{ backgroundColor: colors.surface }}
+        >
+          <h3 
+            className="text-lg font-semibold mb-4"
+            style={{ color: colors.text }}
+          >
+            Faturamento por Colaborador
+          </h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={revenueByCollaborator}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip formatter={(value) => `R$ ${value.toLocaleString('pt-BR')}`} />
-              <Bar dataKey="revenue" fill="#8884d8" />
+              <CartesianGrid strokeDasharray="3 3" stroke={colors.border} />
+              <XAxis dataKey="name" stroke={colors.text} />
+              <YAxis stroke={colors.text} />
+              <Tooltip 
+                formatter={(value) => `R$ ${value.toLocaleString('pt-BR')}`}
+                contentStyle={{
+                  backgroundColor: colors.surface,
+                  border: `1px solid ${colors.border}`,
+                  color: colors.text
+                }}
+              />
+              <Bar dataKey="revenue" fill={colors.primary} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Clientes por Colaborador</h3>
+        <div 
+          className="p-6 rounded-lg shadow-md"
+          style={{ backgroundColor: colors.surface }}
+        >
+          <h3 
+            className="text-lg font-semibold mb-4"
+            style={{ color: colors.text }}
+          >
+            Clientes por Colaborador
+          </h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -184,38 +287,76 @@ export default function Dashboard() {
                 labelLine={false}
                 label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
                 outerRadius={80}
-                fill="#8884d8"
+                fill={colors.primary}
                 dataKey="clients"
               >
                 {clientsByCollaborator.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip />
+              <Tooltip 
+                contentStyle={{
+                  backgroundColor: colors.surface,
+                  border: `1px solid ${colors.border}`,
+                  color: colors.text
+                }}
+              />
             </PieChart>
           </ResponsiveContainer>
         </div>
       </div>
 
       {/* Resumo do Fluxo de Caixa */}
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumo do Fluxo de Caixa</h3>
+      <div 
+        className="p-6 rounded-lg shadow-md"
+        style={{ backgroundColor: colors.surface }}
+      >
+        <h3 
+          className="text-lg font-semibold mb-4"
+          style={{ color: colors.text }}
+        >
+          Resumo do Fluxo de Caixa
+        </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="text-center">
-            <p className="text-sm font-medium text-gray-600">Total de Entradas</p>
-            <p className="text-2xl font-bold text-green-600">
+            <p 
+              className="text-sm font-medium"
+              style={{ color: colors.textSecondary }}
+            >
+              Total de Entradas
+            </p>
+            <p 
+              className="text-2xl font-bold"
+              style={{ color: colors.success }}
+            >
               R$ {cashflowSummary.totalIncome.toLocaleString('pt-BR')}
             </p>
           </div>
           <div className="text-center">
-            <p className="text-sm font-medium text-gray-600">Total de Saídas</p>
-            <p className="text-2xl font-bold text-red-600">
+            <p 
+              className="text-sm font-medium"
+              style={{ color: colors.textSecondary }}
+            >
+              Total de Saídas
+            </p>
+            <p 
+              className="text-2xl font-bold"
+              style={{ color: colors.error }}
+            >
               R$ {cashflowSummary.totalExpenses.toLocaleString('pt-BR')}
             </p>
           </div>
           <div className="text-center">
-            <p className="text-sm font-medium text-gray-600">Saldo</p>
-            <p className={`text-2xl font-bold ${cashflowSummary.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <p 
+              className="text-sm font-medium"
+              style={{ color: colors.textSecondary }}
+            >
+              Saldo
+            </p>
+            <p 
+              className="text-2xl font-bold"
+              style={{ color: cashflowSummary.balance >= 0 ? colors.success : colors.error }}
+            >
               R$ {cashflowSummary.balance.toLocaleString('pt-BR')}
             </p>
           </div>

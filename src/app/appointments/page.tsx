@@ -7,6 +7,7 @@ import { getCollaborators, Collaborator } from '@/lib/api/collaborators'
 import { getServices, Service } from '@/lib/api/services'
 import { getClients, Client } from '@/lib/api/clients'
 import { toast } from 'react-toastify'
+import { useRouter } from 'next/navigation'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import { Permission } from '@/contexts/AuthContext'
 
@@ -62,6 +63,8 @@ export default function AppointmentsPage() {
     notes: ''
   })
 
+  const router = useRouter()
+
   useEffect(() => {
     loadData()
   }, [])
@@ -96,47 +99,59 @@ export default function AppointmentsPage() {
         clients: clientsData.length
       })
       
+      // Verificar se os dados foram carregados corretamente
+      if (appointmentsData.length === 0) {
+        console.warn('Nenhum agendamento encontrado')
+      }
+      if (collaboratorsData.length === 0) {
+        console.warn('Nenhum colaborador encontrado')
+      }
+      if (servicesData.length === 0) {
+        console.warn('Nenhum serviço encontrado')
+      }
+      if (clientsData.length === 0) {
+        console.warn('Nenhum cliente encontrado')
+      }
+      
       setAppointments(appointmentsData)
       setCollaborators(collaboratorsData)
       setServices(servicesData)
       setClients(clientsData)
+      
+      console.log('Dados definidos no estado:', {
+        appointments: appointmentsData.length,
+        collaborators: collaboratorsData.length,
+        services: servicesData.length,
+        clients: clientsData.length
+      })
     } catch (error) {
       console.error('Erro ao carregar dados:', error)
-      toast.error('Erro ao carregar dados. Tente novamente.')
+      toast.error('Erro ao carregar dados')
     }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
     try {
       if (editingAppointment) {
-        await toast.promise(
-          updateAppointment(editingAppointment.id, formData),
-          {
-            pending: 'Atualizando...',
-            success: 'Agendamento atualizado!',
-            error: {
-              render({ data }: { data: any }) {
-                return data?.message || 'Erro ao atualizar agendamento';
-              },
-            },
+        await updateAppointment(editingAppointment.id, formData)
+        toast.success('Agendamento atualizado com sucesso!', {
+          render({ data }: { data: any }) {
+            return <div className="text-green-600">{data}</div>
           }
-        );
+        })
       } else {
-        await toast.promise(
-          createAppointment(formData),
-          {
-            pending: 'Agendando...',
-            success: 'Agendamento criado!',
-            error: {
-              render({ data }: { data: any }) {
-                return data?.message || 'Erro ao criar agendamento';
-              },
-            },
+        await createAppointment(formData)
+        toast.success('Agendamento criado com sucesso!', {
+          render({ data }: { data: any }) {
+            return <div className="text-green-600">{data}</div>
           }
-        );
+        })
       }
-
+      
+      setShowForm(false)
+      setEditingAppointment(null)
       setFormData({
         client_name: '',
         service_id: '',
@@ -146,11 +161,10 @@ export default function AppointmentsPage() {
         duration_minutes: 0,
         notes: ''
       })
-      setEditingAppointment(null)
-      setShowForm(false)
       loadData()
     } catch (error) {
       console.error('Erro ao salvar agendamento:', error)
+      toast.error('Erro ao salvar agendamento')
     }
   }
 
@@ -171,91 +185,143 @@ export default function AppointmentsPage() {
   const handleDelete = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir este agendamento?')) {
       try {
-        await toast.promise(
-          deleteAppointment(id),
-          {
-            pending: 'Excluindo...',
-            success: 'Agendamento excluído!',
-            error: {
-              render({ data }: { data: any }) {
-                return data?.message || 'Erro ao excluir agendamento';
-              },
-            },
+        await deleteAppointment(id)
+        toast.success('Agendamento excluído com sucesso!', {
+          render({ data }: { data: any }) {
+            return <div className="text-green-600">{data}</div>
           }
-        );
+        })
         loadData()
       } catch (error) {
         console.error('Erro ao excluir agendamento:', error)
+        toast.error('Erro ao excluir agendamento')
       }
     }
   }
 
-  const handleCheckout = (appointment: Appointment) => {
-    setSelectedAppointment(appointment)
+  const debugData = () => {
+    console.log('=== DEBUG DADOS ===')
+    console.log('Agendamentos:', appointments)
+    console.log('Serviços:', services)
+    console.log('Clientes:', clients)
+    console.log('Colaboradores:', collaborators)
     
-    // Simular verificação de assinatura
-    const service = services.find(s => s.id === appointment.service_id)
-    const client = clients.find(c => c.client_name === appointment.client_name)
-    
-    // Simular dados de assinatura (em produção, isso viria da API)
-    const hasActiveSubscription = client && Math.random() > 0.5 // Simular 50% de chance de ter assinatura
-    const coveredBySubscription = hasActiveSubscription && service && Math.random() > 0.3 // Simular 70% de chance de estar coberto
-    
-    const checkoutData: CheckoutForm = {
-      appointmentId: appointment.id,
-      clientId: client?.id || '',
-      collaboratorId: appointment.collaborator_id,
-      services: [{
-        serviceId: appointment.service_id,
-        name: service?.name || '',
-        price: Number(appointment.price),
-        coveredBySubscription: coveredBySubscription
-      }],
-      subtotal: Number(appointment.price),
-      discount: coveredBySubscription ? Number(appointment.price) : 0,
-      total: coveredBySubscription ? 0 : Number(appointment.price),
-      paymentMethod: 'dinheiro',
-      giftCardCode: '',
-      giftCardAmount: 0,
-      notes: ''
-    }
-    
-    setCheckoutForm(checkoutData)
-    setShowCheckout(true)
-  }
-
-  const handleCheckoutSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    try {
-      // Aqui você implementaria a lógica de checkout
-      // - Verificar assinatura
-      // - Aplicar gift card
-      // - Processar pagamento
-      // - Atualizar status do agendamento
+    // Verificar se há agendamentos com dados incompletos
+    appointments.forEach((appointment, index) => {
+      const service = services.find(s => s.id === appointment.service_id)
+      const client = clients.find(c => c.client_name === appointment.client_name)
+      const collaborator = collaborators.find(c => c.id === appointment.collaborator_id)
       
-      toast.success('Checkout realizado com sucesso!')
-      setShowCheckout(false)
-      setSelectedAppointment(null)
-      loadData()
-    } catch (error) {
-      toast.error('Erro ao realizar checkout')
-    }
+      console.log(`Agendamento ${index + 1}:`, {
+        id: appointment.id,
+        client_name: appointment.client_name,
+        service_id: appointment.service_id,
+        collaborator_id: appointment.collaborator_id,
+        service_found: !!service,
+        client_found: !!client,
+        collaborator_found: !!collaborator
+      })
+    })
+    
+    toast.info('Dados de debug enviados para o console')
   }
 
-  const applyGiftCard = () => {
-    // Simular validação de gift card
-    if (checkoutForm.giftCardCode) {
-      const giftCardAmount = Math.min(50, checkoutForm.total) // Simular gift card de R$ 50
-      setCheckoutForm(prev => ({
-        ...prev,
-        giftCardAmount,
-        total: Math.max(0, prev.total - giftCardAmount)
-      }))
-      toast.success('Gift card aplicado!')
-    } else {
-      toast.error('Código de gift card inválido')
+  const handleCheckout = (appointment: Appointment) => {
+    console.log('Iniciando checkout para agendamento:', appointment)
+    
+    // Verificar se o agendamento tem todos os campos necessários
+    if (!appointment.service_id || !appointment.client_name || !appointment.collaborator_id) {
+      toast.error('Agendamento com dados incompletos. Verifique se todos os campos estão preenchidos.')
+      console.error('Agendamento incompleto:', {
+        service_id: appointment.service_id,
+        client_name: appointment.client_name,
+        collaborator_id: appointment.collaborator_id
+      })
+      return
     }
+    
+    console.log('Serviços disponíveis:', services.length, services.map(s => ({ id: s.id, name: s.name })))
+    console.log('Clientes disponíveis:', clients.length, clients.map(c => ({ id: c.id, name: c.client_name })))
+    console.log('Colaboradores disponíveis:', collaborators.length, collaborators.map(c => ({ id: c.id, name: c.name })))
+    
+    // Verificar se os dados foram carregados
+    if (services.length === 0 || clients.length === 0 || collaborators.length === 0) {
+      toast.error('Dados não foram carregados completamente. Tente novamente.')
+      console.error('Dados não carregados:', { services: services.length, clients: clients.length, collaborators: collaborators.length })
+      return
+    }
+    
+    // Preparar dados do agendamento para a página de vendas rápidas
+    let service = services.find(s => s.id === appointment.service_id)
+    let client = clients.find(c => c.client_name === appointment.client_name)
+    let collaborator = collaborators.find(c => c.id === appointment.collaborator_id)
+    
+    console.log('Dados encontrados:', {
+      service: service ? { id: service.id, name: service.name } : null,
+      client: client ? { id: client.id, name: client.client_name } : null,
+      collaborator: collaborator ? { id: collaborator.id, name: collaborator.name } : null
+    })
+    
+    // Se não encontrou o serviço, criar um temporário
+    if (!service) {
+      console.warn(`Serviço não encontrado para ID: ${appointment.service_id}, criando temporário`)
+      service = {
+        id: appointment.service_id,
+        name: `Serviço ${appointment.service_id}`,
+        duration_minutes: 60,
+        price: Number(appointment.price),
+        created_at: new Date().toISOString()
+      }
+    }
+    
+    // Se não encontrou o cliente, criar um temporário
+    if (!client) {
+      console.warn(`Cliente não encontrado: "${appointment.client_name}", criando temporário`)
+      client = {
+        id: `temp-${Date.now()}`,
+        client_name: appointment.client_name,
+        client_phone: ''
+      }
+    }
+    
+    // Se não encontrou o colaborador, criar um temporário
+    if (!collaborator) {
+      console.warn(`Colaborador não encontrado para ID: ${appointment.collaborator_id}, criando temporário`)
+      collaborator = {
+        id: appointment.collaborator_id,
+        name: `Colaborador ${appointment.collaborator_id}`,
+        role: 'PROFISSIONAL',
+        email: '',
+        created_at: new Date().toISOString()
+      }
+    }
+
+    // Criar objeto com dados do checkout para passar via URL ou localStorage
+    const checkoutData = {
+      fromAppointment: true,
+      appointmentId: appointment.id,
+      clientId: client.id,
+      clientName: client.client_name,
+      clientPhone: client.client_phone || '',
+      collaboratorId: collaborator.id,
+      collaboratorName: collaborator.name,
+      serviceId: service.id,
+      serviceName: service.name,
+      servicePrice: Number(appointment.price),
+      appointmentDateTime: appointment.datetime,
+      appointmentNotes: appointment.notes || '',
+      status: appointment.status
+    }
+
+    console.log('Dados do checkout preparados:', checkoutData)
+
+    // Salvar dados no localStorage para a página de vendas rápidas acessar
+    localStorage.setItem('appointmentCheckoutData', JSON.stringify(checkoutData))
+    
+    // Redirecionar para a página de vendas rápidas
+    router.push('/quick-sales')
+    
+    toast.success('Redirecionando para finalizar a compra...')
   }
 
   const getStatusColor = (status: string) => {
@@ -293,13 +359,23 @@ export default function AppointmentsPage() {
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-900">Agendamentos</h1>
-          <button
-            onClick={() => setShowForm(true)}
-            className="bg-pink-600 text-white px-4 py-2 rounded-lg hover:bg-pink-700 flex items-center gap-2"
-          >
-            <Plus className="h-5 w-5" />
-            Novo Agendamento
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={debugData}
+              className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 flex items-center gap-2"
+              title="Debug - Verificar dados no console"
+            >
+              <span>🐛</span>
+              Debug
+            </button>
+            <button
+              onClick={() => setShowForm(true)}
+              className="bg-pink-600 text-white px-4 py-2 rounded-lg hover:bg-pink-700 flex items-center gap-2"
+            >
+              <Plus className="h-5 w-5" />
+              Novo Agendamento
+            </button>
+          </div>
         </div>
 
         {/* Formulário de Agendamento */}
