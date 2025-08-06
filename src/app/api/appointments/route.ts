@@ -4,12 +4,15 @@ import { z } from "zod";
 
 const appointmentSchema = z.object({
     client_name: z.string(),
+    client_id: z.string().optional(),
     service_id: z.string(),
     price: z.number(),
     collaborator_id: z.string(),
+    user_id: z.string().optional(),
     datetime: z.string(),
     duration_minutes: z.number(),
-    status: z.enum(['AGENDADO', 'CONCLUIDO', 'CANCELADO']).default('AGENDADO')
+    status: z.enum(['AGENDADO', 'CONCLUIDO', 'CANCELADO', 'NO_SHOW']).default('AGENDADO'),
+    notes: z.string().optional()
 })
 
 export async function GET(req: NextRequest) {
@@ -37,7 +40,8 @@ export async function GET(req: NextRequest) {
             where,
             include: {
                 service: true,
-                collaborator: true
+                collaborator: true,
+                client: true
             },
             orderBy: { datetime: 'asc' }
         });
@@ -58,6 +62,11 @@ export async function POST(req: NextRequest) {
 
         const appointment = await prisma.appointment.create({
             data: validatedData,
+            include: {
+                service: true,
+                collaborator: true,
+                client: true
+            }
         });
 
         return NextResponse.json(appointment, { status: 201 });

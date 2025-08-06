@@ -1,378 +1,355 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, CheckCircle, XCircle, Clock, AlertCircle, Scissors } from 'lucide-react'
-import { getAppointments, createAppointment, updateAppointment, deleteAppointment, type Appointment } from '@/lib/api/appointments'
-import { getCollaborators, type Collaborator } from '@/lib/api/collaborators'
-import { getServices, type Service } from '@/lib/api/services'
+import { Plus, Calendar, Clock, User, Edit, Trash2, CheckCircle, XCircle, DollarSign } from 'lucide-react'
+import { getAppointments, createAppointment, updateAppointment, deleteAppointment, Appointment } from '@/lib/api/appointments'
+import { getCollaborators, Collaborator } from '@/lib/api/collaborators'
+import { getServices, Service } from '@/lib/api/services'
+import { getClients, Client } from '@/lib/api/clients'
 import { toast } from 'react-toastify'
+import ProtectedRoute from '@/components/ProtectedRoute'
+import { Permission } from '@/contexts/AuthContext'
 
-interface AppointmentWithRelations extends Appointment {
-  services?: {
+interface CheckoutForm {
+  appointmentId: string
+  clientId: string
+  collaboratorId: string
+  services: Array<{
+    serviceId: string
     name: string
-    duration_minutes: number
     price: number
-  }
-  collaborators?: {
-    name: string
-    email: string
-  }
+    coveredBySubscription: boolean
+  }>
+  subtotal: number
+  discount: number
+  total: number
+  paymentMethod: string
+  giftCardCode: string
+  giftCardAmount: number
+  notes: string
 }
-import { checkAvailability, formatTime, formatDuration } from '@/lib/availability'
 
 export default function AppointmentsPage() {
-  const [appointments, setAppointments] = useState<AppointmentWithRelations[]>([])
+  const [appointments, setAppointments] = useState<Appointment[]>([])
   const [collaborators, setCollaborators] = useState<Collaborator[]>([])
   const [services, setServices] = useState<Service[]>([])
+  const [clients, setClients] = useState<Client[]>([])
   const [showForm, setShowForm] = useState(false)
-  const [availabilityCheck, setAvailabilityCheck] = useState<{
-    isAvailable: boolean
-    conflictingAppointments: Appointment[]
-    suggestedSlots: Array<{ start: Date; end: Date; isAvailable: boolean }>
-  } | null>(null)
-  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false)
-  
-  const [filters, setFilters] = useState({
-    collaborator: '',
-    status: '',
-    date: ''
+  const [showCheckout, setShowCheckout] = useState(false)
+  const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null)
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
+  const [checkoutForm, setCheckoutForm] = useState<CheckoutForm>({
+    appointmentId: '',
+    clientId: '',
+    collaboratorId: '',
+    services: [],
+    subtotal: 0,
+    discount: 0,
+    total: 0,
+    paymentMethod: 'dinheiro',
+    giftCardCode: '',
+    giftCardAmount: 0,
+    notes: ''
   })
 
   const [formData, setFormData] = useState({
     client_name: '',
     service_id: '',
-    price: '',
+    price: 0,
     collaborator_id: '',
     datetime: '',
-    duration_minutes: '',
-    status: 'agendado' as const
+    duration_minutes: 0,
+    notes: ''
   })
 
-  const loadAppointments = async () => {
-    try {
-      const filters = {
-        collaborator_id: filters.collaborator || undefined,
-        status: filters.status || undefined,
-        date: filters.date || undefined
-      }
-      
-      const data = await toast.promise(
-        getAppointments(filters),
-        {
-          pending: 'Buscando agendamentos...',
-          success: 'Agendamentos carregados!',
-          error: {
-            render({ data }) {
-              return data?.message || 'Erro ao buscar agendamentos';
-            },
-          },
-        }
-      );
-      setAppointments(data);
-    } catch (error) {
-      console.error('Erro ao carregar agendamentos:', error)
-    }
-  }
-
   useEffect(() => {
-    loadAppointments()
-    loadCollaborators()
-    loadServices()
-  }, [filters])
+    loadData()
+  }, [])
 
-  const loadCollaborators = async () => {
+  const loadData = async () => {
     try {
-      const data = await toast.promise(
-        getCollaborators(),
-        {
-          pending: 'Buscando colaboradores...',
-          success: 'Colaboradores carregados!',
-          error: {
-            render({ data }) {
-              return data?.message || 'Erro ao buscar colaboradores';
-            },
-          },
-        }
-      );
-      setCollaborators(data);
-    } catch (error) {
-      console.error('Erro ao carregar colaboradores:', error)
-    }
-  }
-
-  const loadServices = async () => {
-    try {
-      const data = await toast.promise(
-        getServices(),
-        {
-          pending: 'Buscando serviços...',
-          success: 'Serviços carregados!',
-          error: {
-            render({ data }) {
-              return data?.message || 'Erro ao buscar serviços';
-            },
-          },
-        }
-      );
-      setServices(data);
-    } catch (error) {
-      console.error('Erro ao carregar serviços:', error)
-    }
-  }
-
-  const handleServiceChange = (serviceId: string) => {
-    const service = services.find(s => s.id === serviceId)
-    if (service) {
-      setFormData({
-        ...formData,
-        service_id: serviceId,
-        price: service.price.toString(),
-        duration_minutes: service.duration_minutes.toString()
+      console.log('Iniciando carregamento de dados...')
+      
+      const [appointmentsData, collaboratorsData, servicesData, clientsData] = await Promise.all([
+        getAppointments().catch(error => {
+          console.error('Erro ao carregar appointments:', error)
+          return []
+        }),
+        getCollaborators().catch(error => {
+          console.error('Erro ao carregar collaborators:', error)
+          return []
+        }),
+        getServices().catch(error => {
+          console.error('Erro ao carregar services:', error)
+          return []
+        }),
+        getClients().catch(error => {
+          console.error('Erro ao carregar clients:', error)
+          return []
+        })
+      ])
+      
+      console.log('Dados carregados:', {
+        appointments: appointmentsData.length,
+        collaborators: collaboratorsData.length,
+        services: servicesData.length,
+        clients: clientsData.length
       })
-    }
-  }
-
-  const checkAvailabilityForSlot = async () => {
-    if (!formData.collaborator_id || !formData.datetime || !formData.duration_minutes) {
-      return
-    }
-
-    setIsCheckingAvailability(true)
-    try {
-      const startTime = new Date(formData.datetime)
-      const duration = parseInt(formData.duration_minutes)
       
-      const result = await checkAvailability(
-        formData.collaborator_id,
-        startTime,
-        duration
-      )
-      
-      setAvailabilityCheck(result)
+      setAppointments(appointmentsData)
+      setCollaborators(collaboratorsData)
+      setServices(servicesData)
+      setClients(clientsData)
     } catch (error) {
-      console.error('Erro ao verificar disponibilidade:', error)
-    } finally {
-      setIsCheckingAvailability(false)
+      console.error('Erro ao carregar dados:', error)
+      toast.error('Erro ao carregar dados. Tente novamente.')
     }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    // Verificar disponibilidade antes de salvar
-    if (availabilityCheck && !availabilityCheck.isAvailable) {
-      alert('Este horário não está disponível. Verifique os conflitos listados abaixo.')
-      return
-    }
-
     try {
-      const appointmentData = {
-        ...formData,
-        price: parseFloat(formData.price),
-        duration_minutes: parseInt(formData.duration_minutes),
-        status: formData.status.toUpperCase() as 'AGENDADO' | 'CONCLUIDO' | 'CANCELADO'
-      }
-
-      await toast.promise(
-        createAppointment(appointmentData),
-        {
-          pending: 'Criando agendamento...',
-          success: 'Agendamento criado com sucesso!',
-          error: {
-            render({ data }) {
-              return data?.message || 'Erro ao criar agendamento';
+      if (editingAppointment) {
+        await toast.promise(
+          updateAppointment(editingAppointment.id, formData),
+          {
+            pending: 'Atualizando...',
+            success: 'Agendamento atualizado!',
+            error: {
+              render({ data }: { data: any }) {
+                return data?.message || 'Erro ao atualizar agendamento';
+              },
             },
-          },
-        }
-      );
+          }
+        );
+      } else {
+        await toast.promise(
+          createAppointment(formData),
+          {
+            pending: 'Agendando...',
+            success: 'Agendamento criado!',
+            error: {
+              render({ data }: { data: any }) {
+                return data?.message || 'Erro ao criar agendamento';
+              },
+            },
+          }
+        );
+      }
 
       setFormData({
         client_name: '',
         service_id: '',
-        price: '',
+        price: 0,
         collaborator_id: '',
         datetime: '',
-        duration_minutes: '',
-        status: 'agendado'
+        duration_minutes: 0,
+        notes: ''
       })
-      setAvailabilityCheck(null)
+      setEditingAppointment(null)
       setShowForm(false)
-      loadAppointments()
+      loadData()
     } catch (error) {
-      console.error('Erro ao criar agendamento:', error)
+      console.error('Erro ao salvar agendamento:', error)
     }
   }
 
-  const updateStatus = async (id: string, status: 'agendado' | 'concluído' | 'cancelado') => {
-    try {
-      const statusUpper = status === 'concluído' ? 'CONCLUIDO' : status.toUpperCase() as 'AGENDADO' | 'CONCLUIDO' | 'CANCELADO'
-      
-      await toast.promise(
-        updateAppointment(id, { status: statusUpper }),
-        {
-          pending: 'Atualizando status...',
-          success: 'Status atualizado com sucesso!',
-          error: {
-            render({ data }) {
-              return data?.message || 'Erro ao atualizar status';
-            },
-          },
-        }
-      );
-      loadAppointments()
-    } catch (error) {
-      console.error('Erro ao atualizar status:', error)
-    }
+  const handleEdit = (appointment: Appointment) => {
+    setEditingAppointment(appointment)
+    setFormData({
+      client_name: appointment.client_name,
+      service_id: appointment.service_id,
+      price: Number(appointment.price),
+      collaborator_id: appointment.collaborator_id,
+      datetime: appointment.datetime,
+      duration_minutes: appointment.duration_minutes,
+      notes: appointment.notes || ''
+    })
+    setShowForm(true)
   }
 
-  const deleteAppointment = async (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir este agendamento?')) {
       try {
         await toast.promise(
           deleteAppointment(id),
           {
-            pending: 'Deletando agendamento...',
-            success: 'Agendamento deletado com sucesso!',
+            pending: 'Excluindo...',
+            success: 'Agendamento excluído!',
             error: {
-              render({ data }) {
-                return data?.message || 'Erro ao deletar agendamento';
+              render({ data }: { data: any }) {
+                return data?.message || 'Erro ao excluir agendamento';
               },
             },
           }
         );
-        loadAppointments()
+        loadData()
       } catch (error) {
-        console.error('Erro ao deletar agendamento:', error)
+        console.error('Erro ao excluir agendamento:', error)
       }
+    }
+  }
+
+  const handleCheckout = (appointment: Appointment) => {
+    setSelectedAppointment(appointment)
+    
+    // Simular verificação de assinatura
+    const service = services.find(s => s.id === appointment.service_id)
+    const client = clients.find(c => c.client_name === appointment.client_name)
+    
+    // Simular dados de assinatura (em produção, isso viria da API)
+    const hasActiveSubscription = client && Math.random() > 0.5 // Simular 50% de chance de ter assinatura
+    const coveredBySubscription = hasActiveSubscription && service && Math.random() > 0.3 // Simular 70% de chance de estar coberto
+    
+    const checkoutData: CheckoutForm = {
+      appointmentId: appointment.id,
+      clientId: client?.id || '',
+      collaboratorId: appointment.collaborator_id,
+      services: [{
+        serviceId: appointment.service_id,
+        name: service?.name || '',
+        price: Number(appointment.price),
+        coveredBySubscription: coveredBySubscription
+      }],
+      subtotal: Number(appointment.price),
+      discount: coveredBySubscription ? Number(appointment.price) : 0,
+      total: coveredBySubscription ? 0 : Number(appointment.price),
+      paymentMethod: 'dinheiro',
+      giftCardCode: '',
+      giftCardAmount: 0,
+      notes: ''
+    }
+    
+    setCheckoutForm(checkoutData)
+    setShowCheckout(true)
+  }
+
+  const handleCheckoutSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    try {
+      // Aqui você implementaria a lógica de checkout
+      // - Verificar assinatura
+      // - Aplicar gift card
+      // - Processar pagamento
+      // - Atualizar status do agendamento
+      
+      toast.success('Checkout realizado com sucesso!')
+      setShowCheckout(false)
+      setSelectedAppointment(null)
+      loadData()
+    } catch (error) {
+      toast.error('Erro ao realizar checkout')
+    }
+  }
+
+  const applyGiftCard = () => {
+    // Simular validação de gift card
+    if (checkoutForm.giftCardCode) {
+      const giftCardAmount = Math.min(50, checkoutForm.total) // Simular gift card de R$ 50
+      setCheckoutForm(prev => ({
+        ...prev,
+        giftCardAmount,
+        total: Math.max(0, prev.total - giftCardAmount)
+      }))
+      toast.success('Gift card aplicado!')
+    } else {
+      toast.error('Código de gift card inválido')
     }
   }
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'agendado':
+      case 'AGENDADO':
         return 'bg-blue-100 text-blue-800'
-      case 'concluído':
+      case 'CONCLUIDO':
         return 'bg-green-100 text-green-800'
-      case 'cancelado':
+      case 'CANCELADO':
         return 'bg-red-100 text-red-800'
+      case 'NO_SHOW':
+        return 'bg-yellow-100 text-yellow-800'
       default:
         return 'bg-gray-100 text-gray-800'
     }
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'AGENDADO':
+        return <Clock className="h-4 w-4" />
+      case 'CONCLUIDO':
+        return <CheckCircle className="h-4 w-4" />
+      case 'CANCELADO':
+        return <XCircle className="h-4 w-4" />
+      case 'NO_SHOW':
+        return <XCircle className="h-4 w-4" />
+      default:
+        return <Clock className="h-4 w-4" />
+    }
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Agendamentos</h1>
-        <button
-          onClick={() => setShowForm(true)}
-          className="bg-pink-600 text-white px-4 py-2 rounded-lg hover:bg-pink-700 flex items-center gap-2"
-        >
-          <Plus className="h-5 w-5" />
-          Novo Agendamento
-        </button>
-      </div>
-
-      {/* Filtros */}
-      <div className="bg-white p-4 rounded-lg shadow-md mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Colaborador</label>
-            <select
-              value={filters.collaborator}
-              onChange={(e) => setFilters({ ...filters, collaborator: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
-            >
-              <option value="">Todos</option>
-              {collaborators.map((collaborator) => (
-                <option key={collaborator.id} value={collaborator.id}>
-                  {collaborator.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            <select
-              value={filters.status}
-              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
-            >
-              <option value="">Todos</option>
-              <option value="agendado">Agendado</option>
-              <option value="concluído">Concluído</option>
-              <option value="cancelado">Cancelado</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Data</label>
-            <input
-              type="date"
-              value={filters.date}
-              onChange={(e) => setFilters({ ...filters, date: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
-            />
-          </div>
-          <div className="flex items-end">
-            <button
-              onClick={() => setFilters({ collaborator: '', status: '', date: '' })}
-              className="w-full bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400"
-            >
-              Limpar Filtros
-            </button>
-          </div>
+    <ProtectedRoute requiredPermission={Permission.MANAGE_APPOINTMENTS}>
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">Agendamentos</h1>
+          <button
+            onClick={() => setShowForm(true)}
+            className="bg-pink-600 text-white px-4 py-2 rounded-lg hover:bg-pink-700 flex items-center gap-2"
+          >
+            <Plus className="h-5 w-5" />
+            Novo Agendamento
+          </button>
         </div>
-      </div>
 
-      {/* Formulário de agendamento */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">Novo Agendamento</h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Formulário de Agendamento */}
+        {showForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg w-full max-w-md">
+              <h2 className="text-xl font-bold mb-4">
+                {editingAppointment ? 'Editar Agendamento' : 'Novo Agendamento'}
+              </h2>
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nome do Cliente
+                    Cliente
                   </label>
                   <input
                     type="text"
                     value={formData.client_name}
                     onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
                     required
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Serviço
                   </label>
                   <select
                     value={formData.service_id}
-                    onChange={(e) => handleServiceChange(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
+                    onChange={(e) => {
+                      const service = services.find(s => s.id === e.target.value)
+                      setFormData({
+                        ...formData,
+                        service_id: e.target.value,
+                        price: service?.price || 0,
+                        duration_minutes: service?.duration_minutes || 0
+                      })
+                    }}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
                     required
                   >
                     <option value="">Selecione um serviço</option>
-                    {services.map((service) => (
+                    {services.map(service => (
                       <option key={service.id} value={service.id}>
-                        {service.name} ({formatDuration(service.duration_minutes)}) - R$ {service.price}
+                        {service.name} - R$ {service.price}
                       </option>
                     ))}
                   </select>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Colaborador
@@ -380,18 +357,18 @@ export default function AppointmentsPage() {
                   <select
                     value={formData.collaborator_id}
                     onChange={(e) => setFormData({ ...formData, collaborator_id: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
                     required
                   >
                     <option value="">Selecione um colaborador</option>
-                    {collaborators.map((collaborator) => (
+                    {collaborators.map(collaborator => (
                       <option key={collaborator.id} value={collaborator.id}>
-                        {collaborator.name} ({collaborator.role})
+                        {collaborator.name}
                       </option>
                     ))}
                   </select>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Data e Hora
@@ -400,249 +377,302 @@ export default function AppointmentsPage() {
                     type="datetime-local"
                     value={formData.datetime}
                     onChange={(e) => setFormData({ ...formData, datetime: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
                     required
                   />
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Preço
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Duração (minutos)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.duration_minutes}
-                    onChange={(e) => setFormData({ ...formData, duration_minutes: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
-                    required
-                  />
-                </div>
-              </div>
 
-              {/* Verificação de disponibilidade */}
-              {formData.collaborator_id && formData.datetime && formData.duration_minutes && (
-                <div className="mt-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Observações
+                  </label>
+                  <textarea
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <button
+                    type="submit"
+                    className="flex-1 bg-pink-600 text-white py-2 rounded-lg hover:bg-pink-700"
+                  >
+                    {editingAppointment ? 'Atualizar' : 'Agendar'}
+                  </button>
                   <button
                     type="button"
-                    onClick={checkAvailabilityForSlot}
-                    disabled={isCheckingAvailability}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                    onClick={() => {
+                      setShowForm(false)
+                      setEditingAppointment(null)
+                      setFormData({
+                        client_name: '',
+                        service_id: '',
+                        price: 0,
+                        collaborator_id: '',
+                        datetime: '',
+                        duration_minutes: 0,
+                        notes: ''
+                      })
+                    }}
+                    className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400"
                   >
-                    <Clock className="h-4 w-4" />
-                    {isCheckingAvailability ? 'Verificando...' : 'Verificar Disponibilidade'}
+                    Cancelar
                   </button>
                 </div>
-              )}
+              </form>
+            </div>
+          </div>
+        )}
 
-              {/* Resultado da verificação */}
-              {availabilityCheck && (
-                <div className={`mt-4 p-4 rounded-lg ${
-                  availabilityCheck.isAvailable 
-                    ? 'bg-green-50 border border-green-200' 
-                    : 'bg-red-50 border border-red-200'
-                }`}>
-                  <div className="flex items-center gap-2 mb-2">
-                    {availabilityCheck.isAvailable ? (
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                    ) : (
-                      <AlertCircle className="h-5 w-5 text-red-600" />
-                    )}
-                    <span className={`font-medium ${
-                      availabilityCheck.isAvailable ? 'text-green-800' : 'text-red-800'
-                    }`}>
-                      {availabilityCheck.isAvailable ? 'Horário Disponível!' : 'Horário Indisponível'}
-                    </span>
+        {/* Checkout Modal */}
+        {showCheckout && selectedAppointment && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <h2 className="text-xl font-bold mb-4">Checkout</h2>
+              
+              <form onSubmit={handleCheckoutSubmit} className="space-y-6">
+                {/* Informações do Agendamento */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-semibold mb-2">Informações do Agendamento</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium">Cliente:</span> {selectedAppointment.client_name}
+                    </div>
+                    <div>
+                      <span className="font-medium">Data:</span> {new Date(selectedAppointment.datetime).toLocaleDateString('pt-BR')}
+                    </div>
+                    <div>
+                      <span className="font-medium">Hora:</span> {new Date(selectedAppointment.datetime).toLocaleTimeString('pt-BR')}
+                    </div>
+                    <div>
+                      <span className="font-medium">Duração:</span> {selectedAppointment.duration_minutes} min
+                    </div>
                   </div>
-                  
-                  {!availabilityCheck.isAvailable && availabilityCheck.conflictingAppointments.length > 0 && (
-                    <div className="mt-2">
-                      <p className="text-sm text-red-700 mb-2">Conflitos encontrados:</p>
-                                             <ul className="text-sm text-red-600 space-y-1">
-                         {availabilityCheck.conflictingAppointments.map((appointment: Appointment, index: number) => (
-                          <li key={index}>
-                            • {appointment.client_name} - {formatDate(appointment.datetime)} ({formatDuration(appointment.duration_minutes)})
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                </div>
 
-                  {availabilityCheck.suggestedSlots.length > 0 && (
-                    <div className="mt-3">
-                      <p className="text-sm text-gray-700 mb-2">Horários sugeridos:</p>
-                                             <div className="flex flex-wrap gap-2">
-                         {availabilityCheck.suggestedSlots.slice(0, 5).map((slot: { start: Date; end: Date; isAvailable: boolean }, index: number) => (
-                          <button
-                            key={index}
-                            type="button"
-                            onClick={() => {
-                              setFormData({
-                                ...formData,
-                                datetime: slot.start.toISOString().slice(0, 16)
-                              })
-                            }}
-                            className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded hover:bg-blue-200"
-                          >
-                            {formatTime(slot.start)}
-                          </button>
-                        ))}
+                {/* Serviços */}
+                <div>
+                  <h3 className="font-semibold mb-2">Serviços</h3>
+                  <div className="space-y-2">
+                    {checkoutForm.services.map((service, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                        <div>
+                          <span className="font-medium">{service.name}</span>
+                          {service.coveredBySubscription && (
+                            <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                              Coberto pela assinatura
+                            </span>
+                          )}
+                        </div>
+                        <span className="font-medium">
+                          {service.coveredBySubscription ? 'Grátis' : `R$ ${service.price.toFixed(2)}`}
+                        </span>
                       </div>
-                    </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Gift Card */}
+                <div>
+                  <h3 className="font-semibold mb-2">Gift Card</h3>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Código do gift card"
+                      value={checkoutForm.giftCardCode}
+                      onChange={(e) => setCheckoutForm({...checkoutForm, giftCardCode: e.target.value})}
+                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2"
+                    />
+                    <button
+                      type="button"
+                      onClick={applyGiftCard}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                    >
+                      Aplicar
+                    </button>
+                  </div>
+                  {checkoutForm.giftCardAmount > 0 && (
+                    <p className="text-sm text-green-600 mt-1">
+                      Gift card aplicado: R$ {checkoutForm.giftCardAmount.toFixed(2)}
+                    </p>
                   )}
                 </div>
-              )}
-              
-              <div className="flex gap-2 pt-4">
-                <button
-                  type="submit"
-                  className="flex-1 bg-pink-600 text-white py-2 rounded-lg hover:bg-pink-700"
-                >
-                  Salvar Agendamento
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowForm(false)
-                    setFormData({
-                      client_name: '',
-                      service_id: '',
-                      price: '',
-                      collaborator_id: '',
-                      datetime: '',
-                      duration_minutes: '',
-                      status: 'agendado'
-                    })
-                    setAvailabilityCheck(null)
-                  }}
-                  className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </form>
+
+                {/* Método de Pagamento */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Método de Pagamento
+                  </label>
+                  <select
+                    value={checkoutForm.paymentMethod}
+                    onChange={(e) => setCheckoutForm({...checkoutForm, paymentMethod: e.target.value})}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  >
+                    <option value="dinheiro">Dinheiro</option>
+                    <option value="cartao_credito">Cartão de Crédito</option>
+                    <option value="cartao_debito">Cartão de Débito</option>
+                    <option value="pix">PIX</option>
+                  </select>
+                </div>
+
+                {/* Observações */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Observações
+                  </label>
+                  <textarea
+                    value={checkoutForm.notes}
+                    onChange={(e) => setCheckoutForm({...checkoutForm, notes: e.target.value})}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                    rows={3}
+                  />
+                </div>
+
+                {/* Resumo */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="flex justify-between mb-2">
+                    <span>Subtotal:</span>
+                    <span>R$ {checkoutForm.subtotal.toFixed(2)}</span>
+                  </div>
+                  {checkoutForm.discount > 0 && (
+                    <div className="flex justify-between mb-2 text-green-600">
+                      <span>Desconto (Assinatura):</span>
+                      <span>-R$ {checkoutForm.discount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {checkoutForm.giftCardAmount > 0 && (
+                    <div className="flex justify-between mb-2 text-blue-600">
+                      <span>Gift Card:</span>
+                      <span>-R$ {checkoutForm.giftCardAmount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-bold text-lg border-t pt-2">
+                    <span>Total:</span>
+                    <span>R$ {checkoutForm.total.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <button
+                    type="submit"
+                    className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
+                  >
+                    <DollarSign className="h-4 w-4" />
+                    Finalizar Checkout
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCheckout(false)
+                      setSelectedAppointment(null)
+                    }}
+                    className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Lista de Agendamentos */}
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Cliente
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Serviço
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Colaborador
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Data/Hora
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Preço
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Ações
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {appointments.map((appointment) => (
+                  <tr key={appointment.id}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <User className="h-4 w-4 text-gray-400 mr-2" />
+                        <span className="font-medium text-gray-900">{appointment.client_name}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {services.find(s => s.id === appointment.service_id)?.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {collaborators.find(c => c.id === appointment.collaborator_id)?.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="flex items-center">
+                        <Calendar className="h-4 w-4 text-gray-400 mr-1" />
+                        {new Date(appointment.datetime).toLocaleDateString('pt-BR')}
+                      </div>
+                      <div className="flex items-center">
+                        <Clock className="h-4 w-4 text-gray-400 mr-1" />
+                        {new Date(appointment.datetime).toLocaleTimeString('pt-BR')}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      R$ {Number(appointment.price).toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(appointment.status)}`}>
+                        {getStatusIcon(appointment.status)}
+                        <span className="ml-1">{appointment.status}</span>
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex gap-2">
+                        {appointment.status === 'AGENDADO' && (
+                          <button
+                            onClick={() => handleCheckout(appointment)}
+                            className="text-green-600 hover:text-green-900"
+                            title="Checkout"
+                          >
+                            <DollarSign className="h-4 w-4" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleEdit(appointment)}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(appointment.id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
-      )}
-
-      {/* Lista de agendamentos */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Cliente
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Serviço
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Colaborador
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Data/Hora
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Duração
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Preço
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ações
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {appointments.map((appointment) => (
-                <tr key={appointment.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {appointment.client_name}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <Scissors className="h-4 w-4 text-gray-400 mr-2" />
-                      <span className="text-sm text-gray-900">
-                        {appointment.services?.name || 'Serviço não encontrado'}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {appointment.collaborators?.name || 'Colaborador não encontrado'}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatDate(appointment.datetime)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <div className="flex items-center">
-                      <Clock className="h-4 w-4 text-gray-400 mr-1" />
-                      {formatDuration(appointment.duration_minutes)}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    R$ {appointment.price.toLocaleString('pt-BR')}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(appointment.status)}`}>
-                      {appointment.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex gap-2">
-                      {appointment.status === 'agendado' && (
-                        <>
-                          <button
-                            onClick={() => updateStatus(appointment.id, 'concluído')}
-                            className="text-green-600 hover:text-green-900"
-                            title="Marcar como concluído"
-                          >
-                            <CheckCircle className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => updateStatus(appointment.id, 'cancelado')}
-                            className="text-red-600 hover:text-red-900"
-                            title="Cancelar"
-                          >
-                            <XCircle className="h-4 w-4" />
-                          </button>
-                        </>
-                      )}
-                      <button
-                        onClick={() => deleteAppointment(appointment.id)}
-                        className="text-red-600 hover:text-red-900"
-                        title="Excluir"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
       </div>
-    </div>
+    </ProtectedRoute>
   )
 } 

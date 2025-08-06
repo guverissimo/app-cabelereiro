@@ -14,11 +14,56 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  COLLABORATOR
+  ADMIN
+  OWNER
+}
+
+enum Permission {
+  VIEW_OWN_DATA
+  VIEW_ALL_DATA
+  MANAGE_COLLABORATORS
+  MANAGE_SERVICES
+  MANAGE_APPOINTMENTS
+  MANAGE_INVENTORY
+  VIEW_REPORTS
+  MANAGE_FINANCIAL
+  MANAGE_SUBSCRIPTIONS
+  MANAGE_GIFT_CARDS
+}
+
 model User {
   id         String   @id @default(uuid())
   name       String
   email      String   @unique
+  password   String
+  role       UserRole @default(COLLABORATOR)
+  is_active  Boolean  @default(true)
   created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relacionamentos
+  permissions UserPermission[]
+  granted_permissions UserPermission[] @relation("GrantedBy")
+  shifts      Shift[]
+  appointments Appointment[]
+  commissions Commission[]
+  sales       Sale[]
+}
+
+model UserPermission {
+  id           String     @id @default(uuid())
+  user_id      String
+  permission   Permission
+  granted_at   DateTime   @default(now())
+  granted_by   String
+  expires_at   DateTime?
+
+  user         User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  granted_by_user User    @relation("GrantedBy", fields: [granted_by], references: [id])
+
+  @@unique([user_id, permission])
 }
 
 model Collaborator {
@@ -27,6 +72,12 @@ model Collaborator {
   role       String
   email      String   @unique
   created_at DateTime @default(now())
+  
+  // Relacionamentos
+  shifts      Shift[]
+  appointments Appointment[]
+  commissions Commission[]
+  sales       Sale[]
 }
 
 model Service {
@@ -35,7 +86,41 @@ model Service {
   duration_minutes Int
   price            Int
   description      String
+  commission_rate  Float    @default(0.0) // Percentual de comissão
+  is_active        Boolean  @default(true)
   created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  // Relacionamentos
+  appointments     Appointment[]
+  combo_items      ServiceComboItem[]
+  subscriptions    SubscriptionService[]
+  sales            SaleItem[]
+}
+
+model ServiceCombo {
+  id          String @id @default(uuid())
+  name        String
+  description String?
+  discount    Float  @default(0.0) // Desconto em percentual
+  is_active   Boolean @default(true)
+  created_at  DateTime @default(now())
+
+  // Relacionamentos
+  services    ServiceComboItem[]
+  sales       SaleItem[]
+}
+
+model ServiceComboItem {
+  id              String        @id @default(uuid())
+  combo_id        String
+  service_id      String
+  quantity        Int           @default(1)
+  
+  combo           ServiceCombo  @relation(fields: [combo_id], references: [id], onDelete: Cascade)
+  service         Service       @relation(fields: [service_id], references: [id])
+
+  @@unique([combo_id, service_id])
 }
 
 model Schedule {
@@ -48,22 +133,49 @@ model Schedule {
   created_at      DateTime @default(now())
 }
 
+model Shift {
+  id              String   @id @default(uuid())
+  user_id         String
+  collaborator_id String
+  date            DateTime
+  start_time      String
+  end_time        String
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now())
+
+  user            User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  collaborator    Collaborator @relation(fields: [collaborator_id], references: [id], onDelete: Cascade)
+}
+
 enum Status {
   AGENDADO
   CONCLUIDO
   CANCELADO
+  NO_SHOW
 }
 
 model Appointment {
   id               String  @id @default(uuid())
   client_name      String
+  client_id        String?
   service_id       String
   price            Decimal
   collaborator_id  String
   datetime         String
   duration_minutes Float
   status           Status  @default(AGENDADO)
+  notes            String?
   created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  // Relacionamentos
+  client           Client? @relation(fields: [client_id], references: [id])
+  service          Service @relation(fields: [service_id], references: [id])
+  collaborator     Collaborator @relation(fields: [collaborator_id], references: [id])
+  user             User? @relation(fields: [user_id], references: [id])
+  user_id          String?
+  sale             Sale?
+  cashflow         Cashflow[]
 }
 
 model Inventory {
@@ -72,6 +184,9 @@ model Inventory {
   quantity     Int
   unit_price   Int
   last_updated DateTime @default(now())
+  
+  // Relacionamentos
+  sales        SaleItem[]
 }
 
 enum CashflowType {
@@ -87,10 +202,130 @@ model Cashflow {
   date           String
   category       String
   appointment_id String?
+  
+  // Relacionamentos
+  appointment    Appointment? @relation(fields: [appointment_id], references: [id])
 }
 
 model Client {
   id           String @id @default(uuid())
   client_name  String
   client_phone String @unique
+  email        String?
+  address      String?
+  notes        String?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  // Relacionamentos
+  subscriptions Subscription[]
+  gift_cards    GiftCard[]
+  appointments  Appointment[]
+  sales         Sale[]
+}
+
+model Subscription {
+  id          String   @id @default(uuid())
+  client_id   String
+  name        String
+  description String?
+  price       Decimal
+  start_date  DateTime
+  end_date    DateTime?
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+
+  // Relacionamentos
+  client      Client   @relation(fields: [client_id], references: [id], onDelete: Cascade)
+  services    SubscriptionService[]
+  sales       Sale[]
+}
+
+model SubscriptionService {
+  id             String       @id @default(uuid())
+  subscription_id String
+  service_id     String
+  usage_limit    Int          @default(1) // Quantidade de vezes que pode usar por mês
+  used_count     Int          @default(0) // Quantidade já usada no mês atual
+  
+  subscription   Subscription @relation(fields: [subscription_id], references: [id], onDelete: Cascade)
+  service        Service      @relation(fields: [service_id], references: [id])
+
+  @@unique([subscription_id, service_id])
+}
+
+model GiftCard {
+  id           String   @id @default(uuid())
+  client_id    String
+  code         String   @unique
+  amount       Decimal
+  balance      Decimal
+  expires_at   DateTime?
+  is_active    Boolean  @default(true)
+  created_at   DateTime @default(now())
+
+  // Relacionamentos
+  client       Client   @relation(fields: [client_id], references: [id], onDelete: Cascade)
+  sales        Sale[]
+}
+
+model Sale {
+  id              String   @id @default(uuid())
+  client_id       String?
+  collaborator_id String
+  user_id         String
+  appointment_id  String?  @unique
+  subscription_id String?
+  gift_card_id    String?
+  subtotal        Decimal
+  discount        Decimal  @default(0)
+  total           Decimal
+  payment_method  String
+  status          String   @default("completed") // completed, pending, cancelled
+  notes           String?
+  created_at      DateTime @default(now())
+
+  // Relacionamentos
+  client          Client?  @relation(fields: [client_id], references: [id])
+  collaborator    Collaborator @relation(fields: [collaborator_id], references: [id])
+  user            User     @relation(fields: [user_id], references: [id])
+  appointment     Appointment? @relation(fields: [appointment_id], references: [id])
+  subscription    Subscription? @relation(fields: [subscription_id], references: [id])
+  gift_card       GiftCard? @relation(fields: [gift_card_id], references: [id])
+  items           SaleItem[]
+  commissions     Commission[]
+}
+
+model SaleItem {
+  id              String @id @default(uuid())
+  sale_id         String
+  service_id      String?
+  combo_id        String?
+  inventory_id    String?
+  product_name    String
+  quantity        Int
+  unit_price      Decimal
+  total_price     Decimal
+  commission_rate Float  @default(0.0)
+  
+  // Relacionamentos
+  sale            Sale     @relation(fields: [sale_id], references: [id], onDelete: Cascade)
+  service         Service? @relation(fields: [service_id], references: [id])
+  combo           ServiceCombo? @relation(fields: [combo_id], references: [id])
+  inventory       Inventory? @relation(fields: [inventory_id], references: [id])
+}
+
+model Commission {
+  id              String   @id @default(uuid())
+  user_id         String
+  collaborator_id String
+  sale_id         String
+  amount          Decimal
+  percentage      Float
+  created_at      DateTime @default(now())
+
+  // Relacionamentos
+  user            User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  collaborator    Collaborator @relation(fields: [collaborator_id], references: [id], onDelete: Cascade)
+  sale            Sale     @relation(fields: [sale_id], references: [id], onDelete: Cascade)
 }
