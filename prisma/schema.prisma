@@ -1,0 +1,96 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  //output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String   @id @default(uuid())
+  name       String
+  email      String   @unique
+  created_at DateTime @default(now())
+}
+
+model Collaborator {
+  id         String   @id @default(uuid())
+  name       String
+  role       String
+  email      String
+  created_at DateTime @default(now())
+}
+
+model Service {
+  id               String   @id @default(uuid())
+  name             String
+  duration_minutes Int
+  price            Int
+  description      String
+  created_at       DateTime @default(now())
+}
+
+model Schedule {
+  id              String  @id @default(uuid())
+  collaborator_id String
+  day_of_week     Int
+  start_time      String
+  end_time        String
+  is_available    Boolean
+  created_at      String
+}
+
+enum Status {
+  AGENDADO
+  CONCLUIDO
+  CANCELADO
+}
+
+model Appointment {
+  id               String  @id @default(uuid())
+  client_name      String
+  service_id       String
+  price            Decimal
+  collaborator_id  String
+  datetime         String
+  duration_minutes Float
+  status           Status  @default(AGENDADO)
+  created_at       String
+}
+
+model Inventory {
+  id           String @id @default(uuid())
+  product_name String
+  quantity     Int
+  unit_price   Int
+  last_updated String
+}
+
+enum CashflowType {
+  ENTRADA
+  SAIDA
+}
+
+model Cashflow {
+  id             String       @id @default(uuid())
+  type           CashflowType
+  description    String
+  amount         Decimal
+  date           String
+  category       String
+  appointment_id String
+}
+
+model Client {
+  id           String @id @default(uuid())
+  client_name  String
+  client_phone String @unique
+}
