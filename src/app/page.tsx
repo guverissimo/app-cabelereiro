@@ -8,7 +8,11 @@ import {
   CheckCircle
 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
-import { supabase } from '@/lib/supabase'
+import { getAppointments } from '@/lib/api/appointments'
+import { getCollaborators } from '@/lib/api/collaborators'
+import { getInventory } from '@/lib/api/inventory'
+import { getCashflow } from '@/lib/api/cashflow'
+import { toast } from 'react-toastify'
 
 interface ChartData {
   name: string
@@ -37,34 +41,21 @@ export default function Dashboard() {
 
   const loadDashboardData = async () => {
     try {
-      // Carregar agendamentos concluídos
-      const { data: appointments } = await supabase
-        .from('appointments')
-        .select('*')
-        .eq('status', 'concluído')
-
-      // Carregar colaboradores
-      const { data: collaborators } = await supabase
-        .from('collaborators')
-        .select('*')
-
-      // Carregar estoque
-      const { data: inventory } = await supabase
-        .from('inventory')
-        .select('*')
-
-      // Carregar fluxo de caixa
-      const { data: cashflow } = await supabase
-        .from('cashflow')
-        .select('*')
+      // Carregar dados usando as novas APIs
+      const [appointments, collaborators, inventory, cashflow] = await Promise.all([
+        getAppointments({ status: 'CONCLUIDO' }),
+        getCollaborators(),
+        getInventory(),
+        getCashflow()
+      ]);
 
       // Calcular estatísticas
       const completedAppointments = appointments || []
-      const totalRevenue = completedAppointments.reduce((sum, app) => sum + app.price, 0)
+      const totalRevenue = completedAppointments.reduce((sum, app) => sum + Number(app.price), 0)
       const totalInventory = (inventory || []).reduce((sum, item) => sum + (item.quantity * item.unit_price), 0)
       
-      const totalIncome = (cashflow || []).filter(c => c.type === 'entrada').reduce((sum, c) => sum + c.amount, 0)
-      const totalExpenses = (cashflow || []).filter(c => c.type === 'saída').reduce((sum, c) => sum + c.amount, 0)
+      const totalIncome = (cashflow || []).filter(c => c.type === 'ENTRADA').reduce((sum, c) => sum + Number(c.amount), 0)
+      const totalExpenses = (cashflow || []).filter(c => c.type === 'SAIDA').reduce((sum, c) => sum + Number(c.amount), 0)
 
       setStats({
         totalClients: completedAppointments.length,

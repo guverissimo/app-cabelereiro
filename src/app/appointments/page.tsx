@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, Trash2, CheckCircle, XCircle, Clock, AlertCircle, Scissors } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
-import type { Appointment, Collaborator, Service } from '@/lib/supabase'
+import { getAppointments, createAppointment, updateAppointment, deleteAppointment, type Appointment } from '@/lib/api/appointments'
+import { getCollaborators, type Collaborator } from '@/lib/api/collaborators'
+import { getServices, type Service } from '@/lib/api/services'
+import { toast } from 'react-toastify'
 
 interface AppointmentWithRelations extends Appointment {
   services?: {
@@ -48,37 +50,25 @@ export default function AppointmentsPage() {
 
   const loadAppointments = async () => {
     try {
-      let query = supabase
-        .from('appointments')
-        .select(`
-          *,
-          services (
-            name,
-            duration_minutes,
-            price
-          ),
-          collaborators (
-            name,
-            email
-          )
-        `)
-        .order('datetime', { ascending: false })
+      const filters = {
+        collaborator_id: filters.collaborator || undefined,
+        status: filters.status || undefined,
+        date: filters.date || undefined
+      }
       
-      if (filters.collaborator) {
-        query = query.eq('collaborator_id', filters.collaborator)
-      }
-      if (filters.status) {
-        query = query.eq('status', filters.status)
-      }
-      if (filters.date) {
-        const startDate = new Date(filters.date)
-        const endDate = new Date(filters.date)
-        endDate.setDate(endDate.getDate() + 1)
-        query = query.gte('datetime', startDate.toISOString()).lt('datetime', endDate.toISOString())
-      }
-
-      const { data } = await query
-      setAppointments(data || [])
+      const data = await toast.promise(
+        getAppointments(filters),
+        {
+          pending: 'Buscando agendamentos...',
+          success: 'Agendamentos carregados!',
+          error: {
+            render({ data }) {
+              return data?.message || 'Erro ao buscar agendamentos';
+            },
+          },
+        }
+      );
+      setAppointments(data);
     } catch (error) {
       console.error('Erro ao carregar agendamentos:', error)
     }
@@ -92,8 +82,19 @@ export default function AppointmentsPage() {
 
   const loadCollaborators = async () => {
     try {
-      const { data } = await supabase.from('collaborators').select('*')
-      setCollaborators(data || [])
+      const data = await toast.promise(
+        getCollaborators(),
+        {
+          pending: 'Buscando colaboradores...',
+          success: 'Colaboradores carregados!',
+          error: {
+            render({ data }) {
+              return data?.message || 'Erro ao buscar colaboradores';
+            },
+          },
+        }
+      );
+      setCollaborators(data);
     } catch (error) {
       console.error('Erro ao carregar colaboradores:', error)
     }
@@ -101,8 +102,19 @@ export default function AppointmentsPage() {
 
   const loadServices = async () => {
     try {
-      const { data } = await supabase.from('services').select('*').order('name')
-      setServices(data || [])
+      const data = await toast.promise(
+        getServices(),
+        {
+          pending: 'Buscando serviços...',
+          success: 'Serviços carregados!',
+          error: {
+            render({ data }) {
+              return data?.message || 'Erro ao buscar serviços';
+            },
+          },
+        }
+      );
+      setServices(data);
     } catch (error) {
       console.error('Erro ao carregar serviços:', error)
     }
@@ -154,13 +166,25 @@ export default function AppointmentsPage() {
     }
 
     try {
-      const { error } = await supabase.from('appointments').insert([{
+      const appointmentData = {
         ...formData,
         price: parseFloat(formData.price),
-        duration_minutes: parseInt(formData.duration_minutes)
-      }])
+        duration_minutes: parseInt(formData.duration_minutes),
+        status: formData.status.toUpperCase() as 'AGENDADO' | 'CONCLUIDO' | 'CANCELADO'
+      }
 
-      if (error) throw error
+      await toast.promise(
+        createAppointment(appointmentData),
+        {
+          pending: 'Criando agendamento...',
+          success: 'Agendamento criado com sucesso!',
+          error: {
+            render({ data }) {
+              return data?.message || 'Erro ao criar agendamento';
+            },
+          },
+        }
+      );
 
       setFormData({
         client_name: '',
@@ -181,12 +205,20 @@ export default function AppointmentsPage() {
 
   const updateStatus = async (id: string, status: 'agendado' | 'concluído' | 'cancelado') => {
     try {
-      const { error } = await supabase
-        .from('appointments')
-        .update({ status })
-        .eq('id', id)
-
-      if (error) throw error
+      const statusUpper = status === 'concluído' ? 'CONCLUIDO' : status.toUpperCase() as 'AGENDADO' | 'CONCLUIDO' | 'CANCELADO'
+      
+      await toast.promise(
+        updateAppointment(id, { status: statusUpper }),
+        {
+          pending: 'Atualizando status...',
+          success: 'Status atualizado com sucesso!',
+          error: {
+            render({ data }) {
+              return data?.message || 'Erro ao atualizar status';
+            },
+          },
+        }
+      );
       loadAppointments()
     } catch (error) {
       console.error('Erro ao atualizar status:', error)
@@ -196,15 +228,21 @@ export default function AppointmentsPage() {
   const deleteAppointment = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir este agendamento?')) {
       try {
-        const { error } = await supabase
-          .from('appointments')
-          .delete()
-          .eq('id', id)
-
-        if (error) throw error
+        await toast.promise(
+          deleteAppointment(id),
+          {
+            pending: 'Deletando agendamento...',
+            success: 'Agendamento deletado com sucesso!',
+            error: {
+              render({ data }) {
+                return data?.message || 'Erro ao deletar agendamento';
+              },
+            },
+          }
+        );
         loadAppointments()
       } catch (error) {
-        console.error('Erro ao excluir agendamento:', error)
+        console.error('Erro ao deletar agendamento:', error)
       }
     }
   }

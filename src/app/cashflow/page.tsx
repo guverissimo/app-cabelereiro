@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, DollarSign, TrendingUp, TrendingDown, Filter, Calendar } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
-import type { Cashflow } from '@/lib/supabase'
+import { getCashflow, createCashflow, updateCashflow, deleteCashflow, type Cashflow } from '@/lib/api/cashflow'
+import { toast } from 'react-toastify'
 
 export default function CashflowPage() {
   const [cashflow, setCashflow] = useState<Cashflow[]>([])
@@ -29,23 +29,19 @@ export default function CashflowPage() {
 
   const loadCashflow = async () => {
     try {
-      let query = supabase.from('cashflow').select('*').order('date', { ascending: false })
-      
-      if (filters.type) {
-        query = query.eq('type', filters.type)
-      }
-      if (filters.category) {
-        query = query.eq('category', filters.category)
-      }
-      if (filters.startDate) {
-        query = query.gte('date', filters.startDate)
-      }
-      if (filters.endDate) {
-        query = query.lte('date', filters.endDate)
-      }
-
-      const { data } = await query
-      setCashflow(data || [])
+      const data = await toast.promise(
+        getCashflow(filters),
+        {
+          pending: 'Buscando fluxo de caixa...',
+          success: 'Fluxo de caixa carregado!',
+          error: {
+            render({ data }) {
+              return data?.message || 'Erro ao buscar fluxo de caixa';
+            },
+          },
+        }
+      );
+      setCashflow(data);
     } catch (error) {
       console.error('Erro ao carregar fluxo de caixa:', error)
     }
@@ -54,13 +50,25 @@ export default function CashflowPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const { error } = await supabase.from('cashflow').insert([{
+      const transactionData = {
         ...formData,
         amount: parseFloat(formData.amount),
+        type: formData.type.toUpperCase() as 'ENTRADA' | 'SAIDA',
         date: new Date(formData.date).toISOString()
-      }])
+      }
 
-      if (error) throw error
+      await toast.promise(
+        createCashflow(transactionData),
+        {
+          pending: 'Criando transação...',
+          success: 'Transação criada com sucesso!',
+          error: {
+            render({ data }) {
+              return data?.message || 'Erro ao criar transação';
+            },
+          },
+        }
+      );
 
       setFormData({
         type: 'entrada',

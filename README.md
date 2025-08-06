@@ -1,6 +1,6 @@
 # Sistema de Salão de Beleza
 
-Sistema completo de agendamento, gestão de estoque e fluxo de caixa para salão de beleza desenvolvido com Next.js, TypeScript, Tailwind CSS e Supabase.
+Sistema completo de agendamento, gestão de estoque e fluxo de caixa para salão de beleza desenvolvido com Next.js, TypeScript, Tailwind CSS e PostgreSQL.
 
 ## 🚀 Funcionalidades
 
@@ -54,7 +54,7 @@ Sistema completo de agendamento, gestão de estoque e fluxo de caixa para salão
 ## 🛠️ Tecnologias Utilizadas
 
 - **Frontend**: Next.js 15, TypeScript, Tailwind CSS
-- **Backend**: Supabase (PostgreSQL)
+- **Backend**: PostgreSQL com Prisma ORM
 - **Gráficos**: Recharts
 - **Ícones**: Lucide React
 - **Data**: date-fns
@@ -63,7 +63,7 @@ Sistema completo de agendamento, gestão de estoque e fluxo de caixa para salão
 
 - Node.js 18+ 
 - npm ou yarn
-- Conta no Supabase
+- PostgreSQL
 
 ## ⚙️ Configuração
 
@@ -78,196 +78,114 @@ cd cabelereiro
 npm install
 ```
 
-### 3. Configure o Supabase
+### 3. Configure o PostgreSQL
 
-#### 3.1 Crie um projeto no Supabase
-1. Acesse [supabase.com](https://supabase.com)
-2. Crie uma nova conta ou faça login
-3. Crie um novo projeto
-4. Anote a URL e a chave anônima do projeto
-
-#### 3.2 Configure as variáveis de ambiente
+#### 3.1 Configure as variáveis de ambiente
 Crie um arquivo `.env.local` na raiz do projeto:
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=sua_url_do_supabase
-NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave_anonima_do_supabase
+DATABASE_URL="postgresql://usuario:senha@localhost:5432/cabelereiro"
 ```
 
-#### 3.3 Crie as tabelas no Supabase
-
-Execute os seguintes comandos SQL no Editor SQL do Supabase:
-
-```sql
--- Tabela de colaboradores
-CREATE TABLE collaborators (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT NOT NULL,
-  role TEXT NOT NULL,
-  email TEXT NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Tabela de serviços
-CREATE TABLE services (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT NOT NULL,
-  duration_minutes INTEGER NOT NULL,
-  price DECIMAL(10,2) NOT NULL,
-  description TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Tabela de agendamentos (atualizada)
-CREATE TABLE appointments (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  client_name TEXT NOT NULL,
-  service_id UUID REFERENCES services(id),
-  price DECIMAL(10,2) NOT NULL,
-  collaborator_id UUID REFERENCES collaborators(id),
-  datetime TIMESTAMP WITH TIME ZONE NOT NULL,
-  duration_minutes INTEGER NOT NULL,
-  status TEXT CHECK (status IN ('agendado', 'concluído', 'cancelado')) DEFAULT 'agendado',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-  datetime TIMESTAMP WITH TIME ZONE NOT NULL,
-  status TEXT CHECK (status IN ('agendado', 'concluído', 'cancelado')) DEFAULT 'agendado',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Tabela de estoque
-CREATE TABLE inventory (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  product_name TEXT NOT NULL,
-  quantity INTEGER NOT NULL DEFAULT 0,
-  unit_price DECIMAL(10,2) NOT NULL,
-  last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Tabela de fluxo de caixa
-CREATE TABLE cashflow (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  type TEXT CHECK (type IN ('entrada', 'saída')) NOT NULL,
-  description TEXT NOT NULL,
-  amount DECIMAL(10,2) NOT NULL,
-  date TIMESTAMP WITH TIME ZONE NOT NULL,
-  category TEXT NOT NULL,
-  appointment_id UUID REFERENCES appointments(id)
-);
+#### 3.2 Execute as migrações
+```bash
+npx prisma migrate dev
 ```
 
-#### 3.4 Insira dados de exemplo (opcional)
-
-```sql
--- Inserir colaboradores de exemplo
-INSERT INTO collaborators (name, role, email) VALUES
-  ('Bruna Souza', 'Cabeleireira', 'bruna@salon.com'),
-  ('Carlos Lima', 'Manicure', 'carlos@salon.com'),
-  ('Juliana Freitas', 'Esteticista', 'juliana@salon.com');
-
--- Inserir produtos de exemplo
-INSERT INTO inventory (product_name, quantity, unit_price) VALUES
-  ('Shampoo Profissional', 50, 25.90),
-  ('Condicionador', 45, 28.50),
-  ('Máscara Capilar', 30, 35.00),
-  ('Tintura', 20, 45.00),
-  ('Alisante', 15, 120.00);
-
--- Inserir agendamentos de exemplo
-INSERT INTO appointments (client_name, service, price, collaborator_id, datetime, status) VALUES
-  ('Maria Silva', 'Corte Feminino', 45.00, (SELECT id FROM collaborators WHERE name = 'Bruna Souza'), NOW() + INTERVAL '1 day', 'agendado'),
-  ('João Santos', 'Barba', 25.00, (SELECT id FROM collaborators WHERE name = 'Carlos Lima'), NOW() + INTERVAL '2 days', 'agendado'),
-  ('Ana Costa', 'Manicure', 35.00, (SELECT id FROM collaborators WHERE name = 'Carlos Lima'), NOW() - INTERVAL '1 day', 'concluído');
-
--- Inserir transações de exemplo
-INSERT INTO cashflow (type, description, amount, date, category) VALUES
-  ('entrada', 'Pagamento - Corte Feminino', 45.00, NOW() - INTERVAL '1 day', 'Serviços'),
-  ('entrada', 'Pagamento - Manicure', 35.00, NOW() - INTERVAL '1 day', 'Serviços'),
-  ('saída', 'Compra de produtos', 500.00, NOW() - INTERVAL '3 days', 'Fornecedores'),
-  ('saída', 'Conta de luz', 150.00, NOW() - INTERVAL '5 days', 'Despesas');
+#### 3.3 Gere o cliente Prisma
+```bash
+npx prisma generate
 ```
 
-### 4. Execute o projeto
+### 4. Execute a aplicação
+
 ```bash
 npm run dev
 ```
 
-O sistema estará disponível em `http://localhost:3000`
+O sistema estará disponível em: http://localhost:3000
 
-## 📱 Uso do Sistema
+## 📱 Como usar o sistema
 
-### Dashboard
-- Visualize estatísticas gerais do salão
-- Acompanhe faturamento e clientes atendidos
-- Veja gráficos de performance por colaborador
+### Dashboard (Página inicial)
+- Visualize estatísticas gerais
+- Gráficos de faturamento por colaborador
+- Resumo do fluxo de caixa
 
 ### Agendamentos
-- Clique em "Novo Agendamento" para criar um novo
-- Use os filtros para encontrar agendamentos específicos
-- Atualize o status dos agendamentos conforme necessário
+- Clique em "Novo Agendamento" para criar
+- Use filtros para encontrar agendamentos
+- Atualize status: agendado → concluído/cancelado
 
 ### Estoque
-- Adicione novos produtos com quantidade e preço
+- Adicione produtos com quantidade e preço
 - Monitore produtos com estoque baixo
-- Edite ou remova produtos conforme necessário
+- Edite ou remova produtos
 
 ### Fluxo de Caixa
-- Registre entradas e saídas de dinheiro
+- Registre entradas e saídas
 - Categorize as transações
-- Acompanhe o saldo atual
+- Acompanhe o saldo
 
 ### Colaboradores
-- Cadastre novos colaboradores
-- Gerencie funções e informações de contato
-- Edite ou remova colaboradores
+- Cadastre sua equipe
+- Gerencie funções e contatos
 
-## 🚀 Deploy na Vercel
+## 🎯 Funcionalidades principais
 
-### 1. Conecte o repositório
-1. Acesse [vercel.com](https://vercel.com)
-2. Conecte sua conta GitHub
-3. Importe o repositório
+- **Agendamentos**: Sistema completo de marcação de horários
+- **Estoque**: Controle de produtos com alertas de estoque baixo
+- **Fluxo de Caixa**: Gestão financeira completa
+- **Colaboradores**: Gestão da equipe
+- **Dashboard**: Visão geral do negócio
 
-### 2. Configure as variáveis de ambiente
-Na Vercel, adicione as mesmas variáveis de ambiente:
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-
-### 3. Deploy
-A Vercel fará o deploy automaticamente a cada push para o repositório.
-
-## 🔧 Estrutura do Projeto
+## 📁 Estrutura do Projeto
 
 ```
 src/
 ├── app/                    # Páginas da aplicação
-│   ├── appointments/       # Página de agendamentos
-│   ├── inventory/         # Página de estoque
-│   ├── cashflow/          # Página de fluxo de caixa
-│   ├── collaborators/     # Página de colaboradores
-│   ├── layout.tsx         # Layout principal
-│   └── page.tsx           # Dashboard
+│   ├── api/               # Endpoints da API
+│   ├── appointments/      # Página de agendamentos
+│   ├── cashflow/         # Página de fluxo de caixa
+│   ├── collaborators/    # Página de colaboradores
+│   ├── inventory/        # Página de estoque
+│   ├── services/         # Página de serviços
+│   └── schedule/         # Página de agenda
 ├── components/            # Componentes reutilizáveis
-│   └── Sidebar.tsx        # Navegação lateral
-└── lib/                   # Configurações e utilitários
-    └── supabase.ts        # Configuração do Supabase
+├── contexts/             # Contextos React
+├── lib/                  # Utilitários e configurações
+│   ├── api/             # Funções de API
+│   └── prisma.ts        # Cliente Prisma
+└── types/               # Definições de tipos
 ```
 
-## 🎨 Personalização
+## 🔧 Desenvolvimento
 
-O sistema usa Tailwind CSS para estilização. Você pode personalizar:
+### Comandos úteis
 
-- Cores: Edite as classes do Tailwind nos componentes
-- Layout: Modifique o `Sidebar.tsx` para alterar a navegação
-- Funcionalidades: Adicione novos campos nas tabelas do Supabase
+```bash
+# Executar em modo desenvolvimento
+npm run dev
 
-## 📞 Suporte
+# Build para produção
+npm run build
 
-Para dúvidas ou problemas:
-1. Verifique se todas as tabelas foram criadas corretamente no Supabase
-2. Confirme se as variáveis de ambiente estão configuradas
-3. Verifique o console do navegador para erros
+# Executar em produção
+npm start
+
+# Linting
+npm run lint
+
+# Gerar cliente Prisma
+npx prisma generate
+
+# Executar migrações
+npx prisma migrate dev
+
+# Abrir Prisma Studio
+npx prisma studio
+```
 
 ## 📄 Licença
 
-Este projeto é de código aberto e está disponível sob a licença MIT.
+Este projeto está sob a licença MIT.

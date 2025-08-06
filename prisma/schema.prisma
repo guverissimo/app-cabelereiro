@@ -45,7 +45,7 @@ model Schedule {
   start_time      String
   end_time        String
   is_available    Boolean
-  created_at      String
+  created_at      DateTime @default(now())
 }
 
 enum Status {
@@ -63,7 +63,7 @@ model Appointment {
   datetime         String
   duration_minutes Float
   status           Status  @default(AGENDADO)
-  created_at       String
+  created_at       DateTime @default(now())
 }
 
 model Inventory {
@@ -71,7 +71,7 @@ model Inventory {
   product_name String
   quantity     Int
   unit_price   Int
-  last_updated String
+  last_updated DateTime @default(now())
 }
 
 enum CashflowType {
@@ -86,7 +86,7 @@ model Cashflow {
   amount         Decimal
   date           String
   category       String
-  appointment_id String
+  appointment_id String?
 }
 
 model Client {

@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, Package, DollarSign, Edit, Trash2, AlertTriangle } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
-import type { Inventory } from '@/lib/supabase'
+import { getInventory, createInventory, updateInventory, deleteInventory, type Inventory } from '@/lib/api/inventory'
+import { toast } from 'react-toastify'
 
 export default function InventoryPage() {
   const [inventory, setInventory] = useState<Inventory[]>([])
@@ -22,11 +22,19 @@ export default function InventoryPage() {
 
   const loadInventory = async () => {
     try {
-      const { data } = await supabase
-        .from('inventory')
-        .select('*')
-        .order('product_name')
-      setInventory(data || [])
+      const data = await toast.promise(
+        getInventory(),
+        {
+          pending: 'Buscando inventário...',
+          success: 'Inventário carregado!',
+          error: {
+            render({ data }) {
+              return data?.message || 'Erro ao buscar inventário';
+            },
+          },
+        }
+      );
+      setInventory(data);
     } catch (error) {
       console.error('Erro ao carregar estoque:', error)
     }
@@ -43,18 +51,31 @@ export default function InventoryPage() {
       }
 
       if (editingItem) {
-        const { error } = await supabase
-          .from('inventory')
-          .update(itemData)
-          .eq('id', editingItem.id)
-
-        if (error) throw error
+        await toast.promise(
+          updateInventory(editingItem.id, itemData),
+          {
+            pending: 'Atualizando produto...',
+            success: 'Produto atualizado com sucesso!',
+            error: {
+              render({ data }) {
+                return data?.message || 'Erro ao atualizar produto';
+              },
+            },
+          }
+        );
       } else {
-        const { error } = await supabase
-          .from('inventory')
-          .insert([itemData])
-
-        if (error) throw error
+        await toast.promise(
+          createInventory(itemData),
+          {
+            pending: 'Criando produto...',
+            success: 'Produto criado com sucesso!',
+            error: {
+              render({ data }) {
+                return data?.message || 'Erro ao criar produto';
+              },
+            },
+          }
+        );
       }
 
       setFormData({
@@ -83,15 +104,21 @@ export default function InventoryPage() {
   const handleDelete = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir este produto?')) {
       try {
-        const { error } = await supabase
-          .from('inventory')
-          .delete()
-          .eq('id', id)
-
-        if (error) throw error
+        await toast.promise(
+          deleteInventory(id),
+          {
+            pending: 'Deletando produto...',
+            success: 'Produto deletado com sucesso!',
+            error: {
+              render({ data }) {
+                return data?.message || 'Erro ao deletar produto';
+              },
+            },
+          }
+        );
         loadInventory()
       } catch (error) {
-        console.error('Erro ao excluir produto:', error)
+        console.error('Erro ao deletar produto:', error)
       }
     }
   }

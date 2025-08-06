@@ -2,9 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, Users, Edit, Trash2, Mail, User } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
-import type { Collaborator } from '@/lib/supabase'
-import { createCollaborator, getCollaborators } from '@/lib/api/collaborators'
+import { createCollaborator, getCollaborators, updateCollaborator, deleteCollaborator, Collaborator } from '@/lib/api/collaborators'
 import { toast } from 'react-toastify'
 
 export default function CollaboratorsPage() {
@@ -13,7 +11,6 @@ export default function CollaboratorsPage() {
   const [editingCollaborator, setEditingCollaborator] = useState<Collaborator | null>(null)
 
   const [formData, setFormData] = useState({
-    id: '',
     name: '',
     role: '',
     email: ''
@@ -23,27 +20,15 @@ export default function CollaboratorsPage() {
     handleGetCollaborators()
   }, [])
 
-  const loadCollaboratorsSupaBase = async () => {
-    try {
-      const { data } = await supabase
-        .from('collaborators')
-        .select('*')
-        .order('name')
-      setCollaborators(data || [])
-    } catch (error) {
-      console.error('Erro ao carregar colaboradores:', error)
-    }
-  }
-
   const handleGetCollaborators = async () => {
     try {
       const data = await toast.promise(
-        getCollaborators(), // <- sem toast interno
+        getCollaborators(),
         {
           pending: 'Buscando colaboradores...',
           success: 'Colaboradores carregados!',
           error: {
-            render({ data }) {
+            render({ data }: { data: any }) {
               return data?.message || 'Erro ao buscar colaboradores';
             },
           },
@@ -59,35 +44,34 @@ export default function CollaboratorsPage() {
     e.preventDefault()
     try {
       if (editingCollaborator) {
-        const { error } = await supabase
-          .from('collaborators')
-          .update(formData)
-          .eq('id', editingCollaborator.id)
-
-        if (error) throw error
-      } else {
-        // const { error } = await supabase
-        //   .from('collaborators')
-        //   .insert([formData])
-
-        // if (error) throw error
-
-        const create = toast.promise(
-          createCollaborator(formData),
+        await toast.promise(
+          updateCollaborator(editingCollaborator.id, formData),
           {
-            pending: 'Cadastrando...',
-            success: 'Collaborador cadastrado!',
+            pending: 'Atualizando...',
+            success: 'Colaborador atualizado!',
             error: {
-              render({ data }) {
-                return data?.message || 'Erro ao cadastrar Colaborador';
+              render({ data }: { data: any }) {
+                return data?.message || 'Erro ao atualizar colaborador';
               },
             },
           }
-        )
+        );
+      } else {
+        await toast.promise(
+          createCollaborator(formData),
+          {
+            pending: 'Cadastrando...',
+            success: 'Colaborador cadastrado!',
+            error: {
+              render({ data }: { data: any }) {
+                return data?.message || 'Erro ao cadastrar colaborador';
+              },
+            },
+          }
+        );
       }
 
       setFormData({
-        id: '',
         name: '',
         role: '',
         email: ''
@@ -103,7 +87,6 @@ export default function CollaboratorsPage() {
   const handleEdit = (collaborator: Collaborator) => {
     setEditingCollaborator(collaborator)
     setFormData({
-      id: collaborator.id,
       name: collaborator.name,
       role: collaborator.role,
       email: collaborator.email
@@ -114,12 +97,18 @@ export default function CollaboratorsPage() {
   const handleDelete = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir este colaborador?')) {
       try {
-        const { error } = await supabase
-          .from('collaborators')
-          .delete()
-          .eq('id', id)
-
-        if (error) throw error
+        await toast.promise(
+          deleteCollaborator(id),
+          {
+            pending: 'Excluindo...',
+            success: 'Colaborador excluído!',
+            error: {
+              render({ data }: { data: any }) {
+                return data?.message || 'Erro ao excluir colaborador';
+              },
+            },
+          }
+        );
         handleGetCollaborators()
       } catch (error) {
         console.error('Erro ao excluir colaborador:', error)

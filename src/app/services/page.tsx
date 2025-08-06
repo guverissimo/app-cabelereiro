@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, Clock, DollarSign, Edit, Trash2, Scissors } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
-import type { Service } from '@/lib/supabase'
+import { getServices, createService, updateService, deleteService, type Service } from '@/lib/api/services'
+import { toast } from 'react-toastify'
 
 export default function ServicesPage() {
   const [services, setServices] = useState<Service[]>([])
@@ -23,11 +23,19 @@ export default function ServicesPage() {
 
   const loadServices = async () => {
     try {
-      const { data } = await supabase
-        .from('services')
-        .select('*')
-        .order('name')
-      setServices(data || [])
+      const data = await toast.promise(
+        getServices(),
+        {
+          pending: 'Buscando serviços...',
+          success: 'Serviços carregados!',
+          error: {
+            render({ data }) {
+              return data?.message || 'Erro ao buscar serviços';
+            },
+          },
+        }
+      );
+      setServices(data);
     } catch (error) {
       console.error('Erro ao carregar serviços:', error)
     }
@@ -43,18 +51,31 @@ export default function ServicesPage() {
       }
 
       if (editingService) {
-        const { error } = await supabase
-          .from('services')
-          .update(serviceData)
-          .eq('id', editingService.id)
-
-        if (error) throw error
+        await toast.promise(
+          updateService(editingService.id, serviceData),
+          {
+            pending: 'Atualizando serviço...',
+            success: 'Serviço atualizado com sucesso!',
+            error: {
+              render({ data }) {
+                return data?.message || 'Erro ao atualizar serviço';
+              },
+            },
+          }
+        );
       } else {
-        const { error } = await supabase
-          .from('services')
-          .insert([serviceData])
-
-        if (error) throw error
+        await toast.promise(
+          createService(serviceData),
+          {
+            pending: 'Criando serviço...',
+            success: 'Serviço criado com sucesso!',
+            error: {
+              render({ data }) {
+                return data?.message || 'Erro ao criar serviço';
+              },
+            },
+          }
+        );
       }
 
       setFormData({
@@ -85,15 +106,21 @@ export default function ServicesPage() {
   const handleDelete = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir este serviço?')) {
       try {
-        const { error } = await supabase
-          .from('services')
-          .delete()
-          .eq('id', id)
-
-        if (error) throw error
+        await toast.promise(
+          deleteService(id),
+          {
+            pending: 'Deletando serviço...',
+            success: 'Serviço deletado com sucesso!',
+            error: {
+              render({ data }) {
+                return data?.message || 'Erro ao deletar serviço';
+              },
+            },
+          }
+        );
         loadServices()
       } catch (error) {
-        console.error('Erro ao excluir serviço:', error)
+        console.error('Erro ao deletar serviço:', error)
       }
     }
   }

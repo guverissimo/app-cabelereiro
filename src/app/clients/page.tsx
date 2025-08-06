@@ -1,7 +1,7 @@
 'use client'
 
 import { createClient, deleteClient, getClients, updateClient } from '@/lib/api/clients'
-import { Client, supabase } from '@/lib/supabase'
+import { Client } from '@/types/cliente'
 import { Plus, Users, Edit, Trash2, User } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'react-toastify'
@@ -23,17 +23,6 @@ export default function ClientPage() {
   useEffect(() => {
     loadClients();
   }, [])
-  // Buscando clientes do Supabase
-  const loadClientesSupabase = async () => {
-    try {
-      const { data } = await supabase
-        .from('client')
-        .select('*')
-      setClients(data || [])
-    } catch (error) {
-      console.log("Erro ao carregar clientes: ", error)
-    }
-  }
   // Buscando clientes do banco Postgress
   const loadClients = async () => {
     setIsLoading(true);
@@ -71,18 +60,8 @@ export default function ClientPage() {
     e.preventDefault()
     try {
       if (editingClient) {
-        // const { error } = await supabase
-        // 	.from('client')
-        // 	.update(formData)
-        // 	.eq('id', editingClient.id)
         const update = await updateClient(formData)
       } else {
-        // const { error } = await supabase
-        // 	.from('client')
-        // 	.insert([formData])
-        // if (error) throw error
-        // const create = await createClient(formData)
-        // console.log(create);
 
         const create = toast.promise(
           createClient(formData),

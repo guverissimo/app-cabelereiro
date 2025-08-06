@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { Clock, User, ChevronLeft, ChevronRight, Scissors, Plus, Calendar } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
-import type { Collaborator, Service } from '@/lib/supabase'
+import { getCollaborators, type Collaborator } from '@/lib/api/collaborators'
+import { getServices, type Service } from '@/lib/api/services'
 import { getCollaboratorSchedule, formatTime, formatDuration, TimeSlot } from '@/lib/availability'
+import { toast } from 'react-toastify'
 
 export default function SchedulePage() {
   const [collaborators, setCollaborators] = useState<Collaborator[]>([])
@@ -25,7 +26,7 @@ export default function SchedulePage() {
 
   useEffect(() => {
     loadCollaborators()
-    supabase.from('services').select('*').then(({ data }) => setServices(data || []))
+    getServices().then((data) => setServices(data))
   }, [])
 
   useEffect(() => {
@@ -36,8 +37,19 @@ export default function SchedulePage() {
 
   const loadCollaborators = async () => {
     try {
-      const { data } = await supabase.from('collaborators').select('*').order('name')
-      setCollaborators(data || [])
+      const data = await toast.promise(
+        getCollaborators(),
+        {
+          pending: 'Buscando colaboradores...',
+          success: 'Colaboradores carregados!',
+          error: {
+            render({ data }) {
+              return data?.message || 'Erro ao buscar colaboradores';
+            },
+          },
+        }
+      );
+      setCollaborators(data);
       if (data && data.length > 0) {
         setSelectedCollaborator(data[0].id)
       }
