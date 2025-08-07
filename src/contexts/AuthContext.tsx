@@ -41,47 +41,16 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-// Mapeamento de roles para permissões padrão
-const DEFAULT_PERMISSIONS: Record<UserRole, Permission[]> = {
-  [UserRole.COLLABORATOR]: [
-    Permission.VIEW_OWN_DATA,
-    Permission.MANAGE_APPOINTMENTS
-  ],
-  [UserRole.ADMIN]: [
-    Permission.VIEW_OWN_DATA,
-    Permission.VIEW_ALL_DATA,
-    Permission.MANAGE_COLLABORATORS,
-    Permission.MANAGE_SERVICES,
-    Permission.MANAGE_APPOINTMENTS,
-    Permission.MANAGE_INVENTORY,
-    Permission.MANAGE_SUBSCRIPTIONS,
-    Permission.MANAGE_GIFT_CARDS
-  ],
-  [UserRole.OWNER]: [
-    Permission.VIEW_OWN_DATA,
-    Permission.VIEW_ALL_DATA,
-    Permission.MANAGE_COLLABORATORS,
-    Permission.MANAGE_SERVICES,
-    Permission.MANAGE_APPOINTMENTS,
-    Permission.MANAGE_INVENTORY,
-    Permission.VIEW_REPORTS,
-    Permission.MANAGE_FINANCIAL,
-    Permission.MANAGE_SUBSCRIPTIONS,
-    Permission.MANAGE_GIFT_CARDS
-  ]
-}
-
 // Função helper para garantir que o usuário tenha permissões válidas
 const ensureUserPermissions = (userData: any): User => {
   const role = userData.role as UserRole
-  const defaultPermissions = DEFAULT_PERMISSIONS[role] || []
   
   return {
     id: userData.id,
     name: userData.name,
     email: userData.email,
     role: role,
-    permissions: userData.permissions || defaultPermissions
+    permissions: userData.permissions || []
   }
 }
 
@@ -90,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
 
-  // Simular verificação de login no carregamento
+  // Verificar se há usuário salvo no localStorage
   useEffect(() => {
     const savedUser = localStorage.getItem('salon_user')
     if (savedUser) {
@@ -107,42 +76,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    // Simulação de login - em produção, isso seria uma chamada para a API
-    if (email === 'admin@salon.com' && password === '123456') {
-      const userData: User = {
-        id: '1',
-        name: 'Administrador',
-        email: 'admin@salon.com',
-        role: UserRole.ADMIN,
-        permissions: DEFAULT_PERMISSIONS[UserRole.ADMIN]
+    try {
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        const userWithPermissions = ensureUserPermissions(data.user)
+        setUser(userWithPermissions)
+        localStorage.setItem('salon_user', JSON.stringify(userWithPermissions))
+        return true
+      } else {
+        console.error('Erro no login:', data.error)
+        return false
       }
-      setUser(userData)
-      localStorage.setItem('salon_user', JSON.stringify(userData))
-      return true
-    } else if (email === 'owner@salon.com' && password === '123456') {
-      const userData: User = {
-        id: '2',
-        name: 'Proprietário',
-        email: 'owner@salon.com',
-        role: UserRole.OWNER,
-        permissions: DEFAULT_PERMISSIONS[UserRole.OWNER]
-      }
-      setUser(userData)
-      localStorage.setItem('salon_user', JSON.stringify(userData))
-      return true
-    } else if (email === 'collaborator@salon.com' && password === '123456') {
-      const userData: User = {
-        id: '3',
-        name: 'Colaborador',
-        email: 'collaborator@salon.com',
-        role: UserRole.COLLABORATOR,
-        permissions: DEFAULT_PERMISSIONS[UserRole.COLLABORATOR]
-      }
-      setUser(userData)
-      localStorage.setItem('salon_user', JSON.stringify(userData))
-      return true
+    } catch (error) {
+      console.error('Erro na requisição de login:', error)
+      return false
     }
-    return false
   }
 
   const logout = () => {

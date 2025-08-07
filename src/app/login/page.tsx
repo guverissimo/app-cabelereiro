@@ -115,7 +115,7 @@ export default function LoginPage() {
                   borderColor: colors.border,
                   color: colors.text
                 }}
-                placeholder="admin@salon.com"
+                placeholder="Digite seu email"
               />
             </div>
 
@@ -142,7 +142,7 @@ export default function LoginPage() {
                     borderColor: colors.border,
                     color: colors.text
                   }}
-                  placeholder="123456"
+                  placeholder="Digite sua senha"
                 />
                 <button
                   type="button"
@@ -187,15 +187,14 @@ export default function LoginPage() {
               className="text-sm font-medium mb-2"
               style={{ color: colors.primary }}
             >
-              Credenciais de Teste:
+              Primeira vez usando o sistema?
             </h3>
-            <div 
-              className="text-sm space-y-1"
+            <p 
+              className="text-sm"
               style={{ color: colors.textSecondary }}
             >
-              <p><strong>Email:</strong> admin@salon.com</p>
-              <p><strong>Senha:</strong> 123456</p>
-            </div>
+              Entre em contato com o administrador para obter suas credenciais de acesso.
+            </p>
           </div>
         </div>
       </div>

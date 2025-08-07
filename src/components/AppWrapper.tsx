@@ -11,8 +11,11 @@ interface AppWrapperProps {
 export default function AppWrapper({ children }: AppWrapperProps) {
   const pathname = usePathname()
   
-  // Se estiver na página de login, não mostrar sidebar nem proteção
-  if (pathname === '/login') {
+  // Páginas que não precisam de autenticação
+  const publicPages = ['/login', '/setup']
+  
+  // Se estiver em uma página pública, não mostrar sidebar nem proteção
+  if (publicPages.includes(pathname)) {
     return <>{children}</>
   }
   
