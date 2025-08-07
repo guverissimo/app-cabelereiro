@@ -22,6 +22,7 @@ export async function getSchedule(filters?: ScheduleFilters): Promise<Schedule[]
   if (!response.ok) {
     throw new Error('Erro ao buscar agenda')
   }
+  console.log('Response from getSchedule:', response)
   return response.json()
 }
 

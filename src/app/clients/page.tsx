@@ -105,12 +105,6 @@ export default function ClientPage() {
   const handleDelete = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir este colaborador?')) {
       try {
-        // const { error } = await supabase
-        // 	.from('client')
-        // 	.delete()
-        // 	.eq('id', id)
-
-        // if (error) throw error
         const del = await deleteClient(id);
         loadClients()
       } catch (error) {
@@ -149,26 +143,26 @@ export default function ClientPage() {
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg w-full max-w-md">
             <h2 className="text-xl font-bold mb-4">
               {editingClient ? 'Editar Cliente' : 'Novo Client'}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium  mb-1">
                   Nome
                 </label>
                 <input
                   type="text"
                   value={formData.client_name}
                   onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
+                  className="w-full border bg-transparent border-gray-300 rounded-lg px-3 py-2 text-gray-900"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium  mb-1">
                   Celular
                 </label>
                 <input
@@ -176,7 +170,7 @@ export default function ClientPage() {
                   value={formData.client_phone}
                   placeholder="(11) 9XXXX-XXXX"
                   onChange={(e) => setFormData({ ...formData, client_phone: aplicarMascara(e.target.value) })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
+                  className="w-full border bg-transparent border-gray-300 rounded-lg px-3 py-2 text-gray-900"
                   required
                 />
               </div>

@@ -4,13 +4,13 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth, Permission, UserRole } from '@/contexts/AuthContext'
-import { 
-  Home, 
-  Users, 
-  Calendar, 
-  Package, 
-  DollarSign, 
-  Settings, 
+import {
+  Home,
+  Users,
+  Calendar,
+  Package,
+  DollarSign,
+  Settings,
   LogOut,
   BarChart3,
   CreditCard,
@@ -38,6 +38,12 @@ export default function Sidebar() {
     {
       name: 'Colaboradores',
       href: '/collaborators',
+      icon: Users,
+      permission: Permission.MANAGE_COLLABORATORS
+    },
+    {
+      name: 'Clientes',
+      href: '/clients',
       icon: Users,
       permission: Permission.MANAGE_COLLABORATORS
     },
@@ -97,7 +103,7 @@ export default function Sidebar() {
     }
   ]
 
-  const filteredMenuItems = menuItems.filter(item => 
+  const filteredMenuItems = menuItems.filter(item =>
     hasPermission(item.permission)
   )
 
@@ -108,10 +114,10 @@ export default function Sidebar() {
         <div className="flex items-center justify-between mb-8">
           {!isCollapsed && (
             <div className="flex items-center space-x-3">
-              <div className="p-2 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600">
+              <div className="p-2 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600">
                 <Sparkles className="h-6 w-6 text-white" />
               </div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-xl font-bold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
                 Salão
               </h1>
             </div>
@@ -154,16 +160,15 @@ export default function Sidebar() {
           {filteredMenuItems.map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href
-            
+
             return (
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex items-center px-3 py-3 rounded-xl transition-all duration-200 group ${
-                  isActive
+                className={`flex items-center px-3 py-3 rounded-xl transition-all duration-200 group ${isActive
                     ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-lg'
                     : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                }`}
+                  }`}
               >
                 <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200'}`} />
                 {!isCollapsed && (
