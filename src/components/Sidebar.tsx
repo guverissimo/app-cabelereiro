@@ -17,11 +17,11 @@ import {
   Gift,
   UserCheck,
   Clock,
-  Palette
+  ChevronLeft,
+  ChevronRight,
+  Sparkles
 } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
-import ThemeCustomizer from './ThemeCustomizer'
-import ThemePaletteSelector from './ThemePaletteSelector'
 
 export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false)
@@ -94,12 +94,6 @@ export default function Sidebar() {
       href: '/schedule',
       icon: Clock,
       permission: Permission.MANAGE_APPOINTMENTS
-    },
-    {
-      name: 'Configurações',
-      href: '/configuracoes',
-      icon: Palette,
-      permission: Permission.VIEW_OWN_DATA
     }
   ]
 
@@ -108,30 +102,55 @@ export default function Sidebar() {
   )
 
   return (
-    <div className={`bg-white dark:bg-gray-800 shadow-lg transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'}`}>
+    <div className="bg-white dark:bg-gray-800 shadow-xl transition-all duration-300 ease-in-out border-r border-gray-200 dark:border-gray-700 h-screen">
       <div className="p-4 h-full flex flex-col">
-        <div className="flex items-center justify-between mb-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
           {!isCollapsed && (
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Salão</h1>
+            <div className="flex items-center space-x-3">
+              <div className="p-2 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600">
+                <Sparkles className="h-6 w-6 text-white" />
+              </div>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">
+                Salão
+              </h1>
+            </div>
           )}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
           >
-            <div className="w-4 h-4 border-2 border-gray-400 dark:border-gray-300 border-t-transparent rounded-full animate-spin"></div>
+            {isCollapsed ? (
+              <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+            ) : (
+              <ChevronLeft className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+            )}
           </button>
         </div>
 
         {/* User Info */}
         {!isCollapsed && user && (
-          <div className="mb-6 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-            <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-300 capitalize">{user.role.toLowerCase()}</p>
+          <div className="mb-6 p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-xl border border-gray-200 dark:border-gray-600">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 flex items-center justify-center">
+                <span className="text-white font-semibold text-sm">
+                  {user.name.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                  {user.name}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-300 capitalize">
+                  {user.role.toLowerCase()}
+                </p>
+              </div>
+            </div>
           </div>
         )}
 
         {/* Menu Items */}
-        <nav className="space-y-2 flex-1">
+        <nav className="space-y-2 flex-1 overflow-y-auto">
           {filteredMenuItems.map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href
@@ -140,44 +159,37 @@ export default function Sidebar() {
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
+                className={`flex items-center px-3 py-3 rounded-xl transition-all duration-200 group ${
                   isActive
-                    ? 'bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-300'
+                    ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-lg'
                     : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}
               >
-                <Icon className="h-5 w-5" />
+                <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200'}`} />
                 {!isCollapsed && (
-                  <span className="ml-3">{item.name}</span>
+                  <span className="ml-3 font-medium">{item.name}</span>
                 )}
               </Link>
             )
           })}
         </nav>
 
-        {/* Theme Controls */}
+        {/* Theme Toggle - Compacto */}
         {!isCollapsed && (
-          <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-            <p className="text-xs text-gray-500 dark:text-gray-300 mb-2">Tema</p>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <ThemeToggle />
-                <ThemeCustomizer />
-              </div>
-              <ThemePaletteSelector />
-            </div>
+          <div className="mb-4 flex justify-center rounded-md hover:rounded-xl">
+            <ThemeToggle />
           </div>
         )}
 
-        {/* Logout */}
-        <div className="pt-6">
+        {/* Logout - Ajustado para não sair da tela */}
+        <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
           <button
             onClick={logout}
-            className="flex items-center px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors w-full"
+            className="flex items-center px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 rounded-xl transition-all duration-200 w-full group"
           >
-            <LogOut className="h-5 w-5" />
+            <LogOut className="h-4 w-4 group-hover:text-red-600 dark:group-hover:text-red-400" />
             {!isCollapsed && (
-              <span className="ml-3">Sair</span>
+              <span className="ml-3 text-sm font-medium">Sair</span>
             )}
           </button>
         </div>

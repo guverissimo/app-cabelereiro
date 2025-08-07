@@ -1,36 +1,35 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
-import { Scissors, Eye, EyeOff, AlertCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Eye, EyeOff, Lock, Mail, Sparkles } from 'lucide-react'
+import { toast } from 'react-toastify'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  
   const { login } = useAuth()
   const { colors } = useTheme()
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
     setIsLoading(true)
 
     try {
       const success = await login(email, password)
       if (success) {
+        toast.success('Login realizado com sucesso!')
         router.push('/')
       } else {
-        setError('Email ou senha incorretos')
+        toast.error('Email ou senha incorretos')
       }
-    } catch {
-      setError('Erro ao fazer login')
+    } catch (error) {
+      toast.error('Erro ao fazer login')
     } finally {
       setIsLoading(false)
     }
@@ -38,164 +37,165 @@ export default function LoginPage() {
 
   return (
     <div 
-      className="min-h-screen flex items-center justify-center p-4"
+      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
       style={{ 
-        background: `linear-gradient(135deg, ${colors.surface} 0%, ${colors.background} 100%)`
+        background: `linear-gradient(135deg, ${colors.surface} 0%, ${colors.background} 50%, ${colors.surface} 100%)`
       }}
     >
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <div className="flex justify-center">
-            <div 
-              className="p-3 rounded-full"
-              style={{ backgroundColor: colors.primary }}
-            >
-              <Scissors className="h-8 w-8 text-white" />
-            </div>
+      {/* Background decoration */}
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute top-20 left-20 w-72 h-72 rounded-full" style={{ backgroundColor: colors.primary }}></div>
+        <div className="absolute bottom-20 right-20 w-96 h-96 rounded-full" style={{ backgroundColor: colors.accent }}></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full" style={{ backgroundColor: colors.secondary }}></div>
+      </div>
+
+      <div className="relative z-10 w-full max-w-md">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4" style={{ backgroundColor: `${colors.primary}20` }}>
+            <Sparkles className="w-8 h-8" style={{ color: colors.primary }} />
           </div>
-          <h2 
-            className="mt-6 text-3xl font-bold"
+          <h1 
+            className="text-3xl font-bold mb-2"
             style={{ color: colors.text }}
           >
-            Sistema Salão de Beleza
-          </h2>
+            Bem-vindo de volta
+          </h1>
           <p 
-            className="mt-2 text-sm"
+            className="text-sm"
             style={{ color: colors.textSecondary }}
           >
             Faça login para acessar o sistema
           </p>
         </div>
 
+        {/* Login Form */}
         <div 
-          className="py-8 px-6 shadow-xl rounded-lg"
-          style={{ backgroundColor: colors.surface }}
+          className="backdrop-blur-lg rounded-2xl shadow-2xl border p-8"
+          style={{ 
+            backgroundColor: `${colors.surface}CC`,
+            borderColor: colors.border
+          }}
         >
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            {error && (
-              <div 
-                className="border rounded-lg p-3 flex items-center"
-                style={{ 
-                  backgroundColor: `${colors.error}10`,
-                  borderColor: colors.error
-                }}
-              >
-                <AlertCircle 
-                  className="h-5 w-5 mr-2" 
-                  style={{ color: colors.error }}
-                />
-                <span 
-                  className="text-sm"
-                  style={{ color: colors.error }}
-                >
-                  {error}
-                </span>
-              </div>
-            )}
-
-            <div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Email Field */}
+            <div className="space-y-2">
               <label 
-                htmlFor="email" 
-                className="block text-sm font-medium mb-2"
+                className="text-sm font-medium block"
                 style={{ color: colors.text }}
               >
                 Email
               </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
-                style={{
-                  backgroundColor: colors.background,
-                  borderColor: colors.border,
-                  color: colors.text
-                }}
-                placeholder="Digite seu email"
-              />
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5" style={{ color: colors.textSecondary }} />
+                </div>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border transition-all duration-200 focus:ring-2 focus:ring-offset-0"
+                  style={{
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                    color: colors.text,
+                    '--tw-ring-color': colors.primary,
+                  } as React.CSSProperties}
+                  placeholder="Digite seu email"
+                  required
+                />
+              </div>
             </div>
 
-            <div>
+            {/* Password Field */}
+            <div className="space-y-2">
               <label 
-                htmlFor="password" 
-                className="block text-sm font-medium mb-2"
+                className="text-sm font-medium block"
                 style={{ color: colors.text }}
               >
                 Senha
               </label>
               <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Lock className="h-5 w-5" style={{ color: colors.textSecondary }} />
+                </div>
                 <input
-                  id="password"
-                  name="password"
                   type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
+                  className="w-full pl-10 pr-12 py-3 rounded-xl border transition-all duration-200 focus:ring-2 focus:ring-offset-0"
                   style={{
                     backgroundColor: colors.background,
                     borderColor: colors.border,
-                    color: colors.text
-                  }}
+                    color: colors.text,
+                    '--tw-ring-color': colors.primary,
+                  } as React.CSSProperties}
                   placeholder="Digite sua senha"
+                  required
                 />
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  style={{ color: colors.textSecondary }}
                 >
-                  {showPassword ? (
-                    <EyeOff 
-                      className="h-5 w-5" 
-                      style={{ color: colors.textSecondary }}
-                    />
-                  ) : (
-                    <Eye 
-                      className="h-5 w-5" 
-                      style={{ color: colors.textSecondary }}
-                    />
-                  )}
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
             </div>
 
-            <div>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ backgroundColor: colors.primary }}
-              >
-                {isLoading ? 'Entrando...' : 'Entrar'}
-              </button>
-            </div>
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-3 px-4 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95"
+              style={{ 
+                backgroundColor: colors.primary,
+                color: '#ffffff'
+              }}
+            >
+              {isLoading ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  Entrando...
+                </div>
+              ) : (
+                'Entrar'
+              )}
+            </button>
           </form>
 
-          <div 
-            className="mt-6 p-4 rounded-lg"
-            style={{ 
+          {/* Info Box */}
+          <div
+            className="mt-6 p-4 rounded-xl"
+            style={{
               backgroundColor: `${colors.primary}10`,
               border: `1px solid ${colors.primary}30`
             }}
           >
-            <h3 
+            <h3
               className="text-sm font-medium mb-2"
               style={{ color: colors.primary }}
             >
               Primeira vez usando o sistema?
             </h3>
-            <p 
+            <p
               className="text-sm"
               style={{ color: colors.textSecondary }}
             >
               Entre em contato com o administrador para obter suas credenciais de acesso.
             </p>
           </div>
+        </div>
+
+        {/* Footer */}
+        <div className="text-center mt-6">
+          <p 
+            className="text-xs"
+            style={{ color: colors.textSecondary }}
+          >
+            Sistema de Gerenciamento de Salão de Beleza
+          </p>
         </div>
       </div>
     </div>

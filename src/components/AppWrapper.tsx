@@ -25,7 +25,9 @@ export default function AppWrapper({ children }: AppWrapperProps) {
       <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
         <Sidebar />
         <main className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
-          {children}
+          <div className="min-h-full">
+            {children}
+          </div>
         </main>
       </div>
     </ProtectedRoute>

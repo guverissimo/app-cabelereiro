@@ -5,7 +5,10 @@ import {
   Users, 
   DollarSign, 
   Package, 
-  CheckCircle
+  CheckCircle,
+  TrendingUp,
+  TrendingDown,
+  Activity
 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { getAppointments } from '@/lib/api/appointments'
@@ -97,267 +100,198 @@ export default function Dashboard() {
       }
     } catch (error) {
       console.error('Erro ao carregar dados do dashboard:', error)
+      toast.error('Erro ao carregar dados do dashboard')
     }
   }
 
-  const COLORS = [colors.primary, colors.success, colors.warning, colors.accent, colors.secondary]
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value)
+  }
 
   return (
-    <div className="p-6">
-      <h1 
-        className="text-3xl font-bold mb-8"
-        style={{ color: colors.text }}
-      >
-        Dashboard
-      </h1>
-      
-      {/* Cards de estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div 
-          className="p-6 rounded-lg shadow-md"
-          style={{ backgroundColor: colors.surface }}
-        >
-          <div className="flex items-center">
-            <div 
-              className="p-2 rounded-lg"
-              style={{ backgroundColor: `${colors.primary}20` }}
-            >
-              <Users 
-                className="h-6 w-6" 
-                style={{ color: colors.primary }}
-              />
-            </div>
-            <div className="ml-4">
-              <p 
-                className="text-sm font-medium"
-                style={{ color: colors.textSecondary }}
-              >
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">
+          Dashboard
+        </h1>
+        <p className="text-lg text-gray-600 dark:text-gray-300">
+          Visão geral do seu salão de beleza
+        </p>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="p-6 rounded-2xl shadow-lg border transition-all duration-200 hover:shadow-xl transform hover:scale-105 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
                 Clientes Atendidos
               </p>
-              <p 
-                className="text-2xl font-bold"
-                style={{ color: colors.text }}
-              >
+              <p className="text-3xl font-bold mt-2 text-gray-900 dark:text-white">
                 {stats.totalClients}
               </p>
             </div>
-          </div>
-        </div>
-
-        <div 
-          className="p-6 rounded-lg shadow-md"
-          style={{ backgroundColor: colors.surface }}
-        >
-          <div className="flex items-center">
-            <div 
-              className="p-2 rounded-lg"
-              style={{ backgroundColor: `${colors.success}20` }}
-            >
-              <DollarSign 
-                className="h-6 w-6" 
-                style={{ color: colors.success }}
-              />
-            </div>
-            <div className="ml-4">
-              <p 
-                className="text-sm font-medium"
-                style={{ color: colors.textSecondary }}
-              >
-                Faturamento Total
-              </p>
-              <p 
-                className="text-2xl font-bold"
-                style={{ color: colors.text }}
-              >
-                R$ {stats.totalRevenue.toLocaleString('pt-BR')}
-              </p>
+            <div className="p-3 rounded-xl bg-blue-100 dark:bg-blue-900">
+              <Users className="h-8 w-8 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
 
-        <div 
-          className="p-6 rounded-lg shadow-md"
-          style={{ backgroundColor: colors.surface }}
-        >
-          <div className="flex items-center">
-            <div 
-              className="p-2 rounded-lg"
-              style={{ backgroundColor: `${colors.accent}20` }}
-            >
-              <Package 
-                className="h-6 w-6" 
-                style={{ color: colors.accent }}
-              />
+        <div className="p-6 rounded-2xl shadow-lg border transition-all duration-200 hover:shadow-xl transform hover:scale-105 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                Receita Total
+              </p>
+              <p className="text-3xl font-bold mt-2 text-gray-900 dark:text-white">
+                {formatCurrency(stats.totalRevenue)}
+              </p>
             </div>
-            <div className="ml-4">
-              <p 
-                className="text-sm font-medium"
-                style={{ color: colors.textSecondary }}
-              >
-                Valor em Estoque
-              </p>
-              <p 
-                className="text-2xl font-bold"
-                style={{ color: colors.text }}
-              >
-                R$ {stats.totalInventory.toLocaleString('pt-BR')}
-              </p>
+            <div className="p-3 rounded-xl bg-green-100 dark:bg-green-900">
+              <DollarSign className="h-8 w-8 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
 
-        <div 
-          className="p-6 rounded-lg shadow-md"
-          style={{ backgroundColor: colors.surface }}
-        >
-          <div className="flex items-center">
-            <div 
-              className="p-2 rounded-lg"
-              style={{ backgroundColor: `${colors.warning}20` }}
-            >
-              <CheckCircle 
-                className="h-6 w-6" 
-                style={{ color: colors.warning }}
-              />
+        <div className="p-6 rounded-2xl shadow-lg border transition-all duration-200 hover:shadow-xl transform hover:scale-105 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                Valor do Estoque
+              </p>
+              <p className="text-3xl font-bold mt-2 text-gray-900 dark:text-white">
+                {formatCurrency(stats.totalInventory)}
+              </p>
             </div>
-            <div className="ml-4">
-              <p 
-                className="text-sm font-medium"
-                style={{ color: colors.textSecondary }}
-              >
+            <div className="p-3 rounded-xl bg-yellow-100 dark:bg-yellow-900">
+              <Package className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 rounded-2xl shadow-lg border transition-all duration-200 hover:shadow-xl transform hover:scale-105 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
                 Agendamentos Concluídos
               </p>
-              <p 
-                className="text-2xl font-bold"
-                style={{ color: colors.text }}
-              >
+              <p className="text-3xl font-bold mt-2 text-gray-900 dark:text-white">
                 {stats.completedAppointments}
               </p>
+            </div>
+            <div className="p-3 rounded-xl bg-purple-100 dark:bg-purple-900">
+              <CheckCircle className="h-8 w-8 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Gráficos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div 
-          className="p-6 rounded-lg shadow-md"
-          style={{ backgroundColor: colors.surface }}
-        >
-          <h3 
-            className="text-lg font-semibold mb-4"
-            style={{ color: colors.text }}
-          >
-            Faturamento por Colaborador
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Revenue Chart */}
+        <div className="p-6 rounded-2xl shadow-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+          <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+            Receita por Colaborador
           </h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={revenueByCollaborator}>
-              <CartesianGrid strokeDasharray="3 3" stroke={colors.border} />
-              <XAxis dataKey="name" stroke={colors.text} />
-              <YAxis stroke={colors.text} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb dark:#374151" />
+              <XAxis 
+                dataKey="name" 
+                style={{ fontSize: '12px', fill: '#6b7280' }}
+              />
+              <YAxis style={{ fontSize: '12px', fill: '#6b7280' }} />
               <Tooltip 
-                formatter={(value) => `R$ ${value.toLocaleString('pt-BR')}`}
-                contentStyle={{
-                  backgroundColor: colors.surface,
-                  border: `1px solid ${colors.border}`,
-                  color: colors.text
+                contentStyle={{ 
+                  backgroundColor: '#ffffff dark:#1f2937',
+                  border: '1px solid #e5e7eb dark:#374151',
+                  borderRadius: '8px',
+                  color: '#111827 dark:#f9fafb'
                 }}
               />
-              <Bar dataKey="revenue" fill={colors.primary} />
+              <Bar 
+                dataKey="revenue" 
+                fill="#3b82f6"
+                radius={[4, 4, 0, 0]}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        <div 
-          className="p-6 rounded-lg shadow-md"
-          style={{ backgroundColor: colors.surface }}
-        >
-          <h3 
-            className="text-lg font-semibold mb-4"
-            style={{ color: colors.text }}
-          >
+        {/* Clients Chart */}
+        <div className="p-6 rounded-2xl shadow-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+          <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
             Clientes por Colaborador
           </h3>
           <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={clientsByCollaborator}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
-                outerRadius={80}
-                fill={colors.primary}
-                dataKey="clients"
-              >
-                {clientsByCollaborator.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
+            <BarChart data={clientsByCollaborator}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb dark:#374151" />
+              <XAxis 
+                dataKey="name" 
+                style={{ fontSize: '12px', fill: '#6b7280' }}
+              />
+              <YAxis style={{ fontSize: '12px', fill: '#6b7280' }} />
               <Tooltip 
-                contentStyle={{
-                  backgroundColor: colors.surface,
-                  border: `1px solid ${colors.border}`,
-                  color: colors.text
+                contentStyle={{ 
+                  backgroundColor: '#ffffff dark:#1f2937',
+                  border: '1px solid #e5e7eb dark:#374151',
+                  borderRadius: '8px',
+                  color: '#111827 dark:#f9fafb'
                 }}
               />
-            </PieChart>
+              <Bar 
+                dataKey="clients" 
+                fill="#8b5cf6"
+                radius={[4, 4, 0, 0]}
+              />
+            </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      {/* Resumo do Fluxo de Caixa */}
-      <div 
-        className="p-6 rounded-lg shadow-md"
-        style={{ backgroundColor: colors.surface }}
-      >
-        <h3 
-          className="text-lg font-semibold mb-4"
-          style={{ color: colors.text }}
-        >
-          Resumo do Fluxo de Caixa
+      {/* Cashflow Summary */}
+      <div className="p-6 rounded-2xl shadow-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+        <h3 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">
+          Resumo Financeiro
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="text-center">
-            <p 
-              className="text-sm font-medium"
-              style={{ color: colors.textSecondary }}
-            >
-              Total de Entradas
-            </p>
-            <p 
-              className="text-2xl font-bold"
-              style={{ color: colors.success }}
-            >
-              R$ {cashflowSummary.totalIncome.toLocaleString('pt-BR')}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="text-center p-4 rounded-xl bg-green-50 dark:bg-green-900/20">
+            <div className="flex items-center justify-center mb-2">
+              <TrendingUp className="h-6 w-6 mr-2 text-green-600 dark:text-green-400" />
+              <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                Entradas
+              </span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">
+              {formatCurrency(cashflowSummary.totalIncome)}
             </p>
           </div>
-          <div className="text-center">
-            <p 
-              className="text-sm font-medium"
-              style={{ color: colors.textSecondary }}
-            >
-              Total de Saídas
-            </p>
-            <p 
-              className="text-2xl font-bold"
-              style={{ color: colors.error }}
-            >
-              R$ {cashflowSummary.totalExpenses.toLocaleString('pt-BR')}
+
+          <div className="text-center p-4 rounded-xl bg-red-50 dark:bg-red-900/20">
+            <div className="flex items-center justify-center mb-2">
+              <TrendingDown className="h-6 w-6 mr-2 text-red-600 dark:text-red-400" />
+              <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                Saídas
+              </span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">
+              {formatCurrency(cashflowSummary.totalExpenses)}
             </p>
           </div>
-          <div className="text-center">
-            <p 
-              className="text-sm font-medium"
-              style={{ color: colors.textSecondary }}
-            >
-              Saldo
-            </p>
-            <p 
-              className="text-2xl font-bold"
-              style={{ color: cashflowSummary.balance >= 0 ? colors.success : colors.error }}
-            >
-              R$ {cashflowSummary.balance.toLocaleString('pt-BR')}
+
+          <div className="text-center p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20">
+            <div className="flex items-center justify-center mb-2">
+              <Activity className="h-6 w-6 mr-2 text-blue-600 dark:text-blue-400" />
+              <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                Saldo
+              </span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">
+              {formatCurrency(cashflowSummary.balance)}
             </p>
           </div>
         </div>
