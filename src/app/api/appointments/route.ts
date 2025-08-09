@@ -9,7 +9,7 @@ const appointmentSchema = z.object({
     price: z.number(),
     collaborator_id: z.string(),
     user_id: z.string().optional(),
-    datetime: z.string(),
+    datetime: z.string().optional(),
     duration_minutes: z.number(),
     status: z.enum(['AGENDADO', 'CONCLUIDO', 'CANCELADO', 'NO_SHOW']).default('AGENDADO'),
     notes: z.string().optional()

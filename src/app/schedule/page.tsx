@@ -6,6 +6,10 @@ import { getCollaborators, type Collaborator } from '@/lib/api/collaborators'
 import { getServices, type Service } from '@/lib/api/services'
 import { getCollaboratorSchedule, formatTime, formatDuration, TimeSlot } from '@/lib/availability'
 import { toast } from 'react-toastify'
+import { getClients } from '@/lib/api/clients'
+import { Client } from '@/types/cliente'
+import AsyncSelect from 'react-select/async'
+import { Appointment, createAppointment } from '@/lib/api/appointments'
 
 export default function SchedulePage() {
   const [collaborators, setCollaborators] = useState<Collaborator[]>([])
@@ -16,12 +20,16 @@ export default function SchedulePage() {
   const [isLoading, setIsLoading] = useState(false)
   const [showAppointmentForm, setShowAppointmentForm] = useState(false)
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null)
+  const [clients, setClients] = useState<Client[]>([])
 
-  const [appointmentForm, setAppointmentForm] = useState({
+  const [appointmentForm, setAppointmentForm] = useState<Appointment>({
+    client_id: '',
     client_name: '',
+    collaborator_id: '',
     service_id: '',
-    price: '',
-    duration_minutes: ''
+    price: 0,
+    duration_minutes: 0.0,
+    datetime: new Date().toISOString(),
   })
 
   useEffect(() => {
@@ -57,6 +65,17 @@ export default function SchedulePage() {
       console.error('Erro ao carregar colaboradores:', error)
     }
   }
+
+
+  const searchClients = async (search?: string) => {
+    try {
+      const data: Client[] = await getClients(search);
+      setClients(data);
+      return data;
+    } catch (error) {
+      console.error("Erro ao buscar clientes:", error);
+    }
+  };
 
   const loadSchedule = async () => {
     if (!selectedCollaborator) return
@@ -107,8 +126,8 @@ export default function SchedulePage() {
       setAppointmentForm({
         ...appointmentForm,
         service_id: serviceId,
-        price: service.price.toString(),
-        duration_minutes: service.duration_minutes.toString()
+        price: service.price,
+        duration_minutes: service.duration_minutes
       })
     }
   }
@@ -118,28 +137,22 @@ export default function SchedulePage() {
     if (!selectedSlot || !selectedCollaborator) return
 
     try {
-      const { error } = await supabase.from('appointments').insert([{
-        client_name: appointmentForm.client_name,
-        service_id: appointmentForm.service_id,
-        price: parseFloat(appointmentForm.price),
-        collaborator_id: selectedCollaborator,
-        datetime: selectedSlot.start.toISOString(),
-        duration_minutes: parseInt(appointmentForm.duration_minutes),
-        status: 'agendado'
-      }])
 
-      if (error) throw error
+      const data = await createAppointment(appointmentForm);
 
       // Limpar formulário
       setAppointmentForm({
+        client_id: '',
         client_name: '',
+        collaborator_id: '',
         service_id: '',
-        price: '',
-        duration_minutes: ''
+        price: 0,
+        duration_minutes: 0.0,
+        datetime: new Date().toISOString(),
       })
       setSelectedSlot(null)
       setShowAppointmentForm(false)
-      
+
       // Recarregar agenda
       loadSchedule()
     } catch (error) {
@@ -160,14 +173,14 @@ export default function SchedulePage() {
       </div>
 
       {/* Controles */}
-      <div className="bg-white p-4 rounded-lg shadow-md mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="rounded-xl bg-white p-4  shadow-md mb-6 ">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 ">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Colaborador</label>
             <select
               value={selectedCollaborator}
               onChange={(e) => setSelectedCollaborator(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
+              className="w-full border rounded-xl bg-white border-gray-30 px-3 py-2 text-gray-900"
             >
               {collaborators.map((collaborator) => (
                 <option key={collaborator.id} value={collaborator.id}>
@@ -176,27 +189,27 @@ export default function SchedulePage() {
               ))}
             </select>
           </div>
-          
+
           <div className="flex items-end">
             <div className="flex items-center gap-2">
               <button
                 onClick={() => changeDate('prev')}
-                className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="rounded-full p-2 border border-gray-300 hover:bg-gray-50 transition-colors duration-200"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
-              <span className="text-sm font-medium text-gray-900 min-w-[200px] text-center">
+              <span className=" text-sm font-medium text-gray-900 min-w-[200px] text-center">
                 {formatDate(selectedDate)}
               </span>
               <button
                 onClick={() => changeDate('next')}
-                className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                className=" rounded-full p-2 border border-gray-300 hover:bg-gray-50 transition-colors duration-200"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
             </div>
           </div>
-          
+
           <div className="flex items-end">
             <button
               onClick={() => setSelectedDate(new Date())}
@@ -209,7 +222,7 @@ export default function SchedulePage() {
       </div>
 
       {/* Agenda */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+      <div className="bg-white rounded-xl shadow-md overflow-hidden border-2 border-gray-600">
         {isLoading ? (
           <div className="p-8 text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600 mx-auto"></div>
@@ -240,15 +253,14 @@ export default function SchedulePage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-gray-200 divide-y-0">
                 {timeSlots.map((slot, index) => (
-                  <tr 
-                    key={index} 
-                    className={`${
-                      slot.isAvailable 
-                        ? 'hover:bg-green-50 cursor-pointer' 
-                        : 'bg-pink-50'
-                    }`}
+                  <tr
+                    key={index}
+                    className={`${slot.isAvailable
+                      ? 'hover:bg-gray-600 cursor-pointer'
+                      : 'bg-pink-50'
+                      }`}
                     onClick={() => handleSlotClick(slot)}
                   >
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -258,11 +270,10 @@ export default function SchedulePage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        slot.isAvailable 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${slot.isAvailable
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                        }`}>
                         {slot.isAvailable ? 'Livre' : 'Ocupado'}
                       </span>
                     </td>
@@ -307,35 +318,40 @@ export default function SchedulePage() {
       {/* Formulário de Agendamento */}
       {showAppointmentForm && selectedSlot && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg w-full max-w-md">
+          <div className="bg-white p-6 rounded-xl w-full max-w-md">
             <h2 className="text-xl font-bold mb-4">Novo Agendamento</h2>
             <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-              <p className="text-sm text-blue-800">
+              <p className="text-sm text-blue-800 ">
                 <strong>Horário selecionado:</strong> {formatTime(selectedSlot.start)} - {formatTime(selectedSlot.end)}
               </p>
             </div>
             <form onSubmit={handleCreateAppointment} className="space-y-4">
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nome do Cliente
-                </label>
-                <input
-                  type="text"
-                  value={appointmentForm.client_name}
-                  onChange={(e) => setAppointmentForm({ ...appointmentForm, client_name: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
-                  required
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
+                <AsyncSelect<Client>
+                  className=" text-black"
+                  cacheOptions
+                  defaultOptions
+                  loadOptions={searchClients}
+                  getOptionLabel={(client) => `${client.client_name} ${client.client_phone ?? ""}`}
+                  getOptionValue={(client) => client.id}
+                  placeholder="Selecione ou pesquise um cliente..."
+                  onChange={(client) => {
+                    appointmentForm.client_name = client?.client_name || ''
+                    appointmentForm.client_id = client?.id || ''
+                  }}
                 />
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-100 mb-1">
                   Serviço
                 </label>
                 <select
                   value={appointmentForm.service_id}
                   onChange={(e) => handleServiceChange(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
+                  className="w-full border-b border-gray-300 l px-3 py-2 text-gray-50 bg-white outline-none"
                   required
                 >
                   <option value="">Selecione um serviço</option>
@@ -346,9 +362,9 @@ export default function SchedulePage() {
                   ))}
                 </select>
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-100 mb-1">
                   Preço
                 </label>
                 <input
@@ -356,28 +372,28 @@ export default function SchedulePage() {
                   step="0.01"
                   value={appointmentForm.price}
                   onChange={(e) => setAppointmentForm({ ...appointmentForm, price: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
+                  className="w-full border-b border-gray-300 l px-3 py-2 text-gray-50 bg-white outline-none"
                   required
                 />
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-100 mb-1">
                   Duração (minutos)
                 </label>
                 <input
                   type="number"
                   value={appointmentForm.duration_minutes}
                   onChange={(e) => setAppointmentForm({ ...appointmentForm, duration_minutes: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
+                  className="w-full border-b border-gray-300 l px-3 py-2 text-gray-50 bg-white outline-none"
                   required
                 />
               </div>
-              
+
               <div className="flex gap-2 pt-4">
                 <button
                   type="submit"
-                  className="flex-1 bg-pink-600 text-white py-2 rounded-lg hover:bg-pink-700"
+                  className="flex-1 bg-pink-600 text-white py-2 rounded-xl hover:bg-pink-700"
                 >
                   Criar Agendamento
                 </button>
@@ -387,24 +403,27 @@ export default function SchedulePage() {
                     setShowAppointmentForm(false)
                     setSelectedSlot(null)
                     setAppointmentForm({
+                      client_id: '',
                       client_name: '',
+                      collaborator_id: '',
                       service_id: '',
                       price: '',
                       duration_minutes: ''
                     })
                   }}
-                  className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400"
+                  className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-xl hover:bg-gray-400"
                 >
                   Cancelar
                 </button>
               </div>
             </form>
           </div>
-        </div>
-      )}
+        </div >
+      )
+      }
 
       {/* Legenda */}
-      <div className="mt-6 bg-white p-4 rounded-lg shadow-md">
+      <div className="mt-6 bg-white p-4 rounded-xl shadow-md">
         <h3 className="text-lg font-semibold text-gray-900 mb-3">Legenda</h3>
         <div className="flex gap-6">
           <div className="flex items-center gap-2">
@@ -417,6 +436,6 @@ export default function SchedulePage() {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   )
 } 

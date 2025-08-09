@@ -37,7 +37,7 @@ export async function checkAvailability(
   durationMinutes: number
 ): Promise<AvailabilityCheck> {
   const endTime = new Date(startTime.getTime() + durationMinutes * 60000)
-  
+
   try {
     // Buscar agendamentos do colaborador no período
     const appointments = await getAppointments({
@@ -48,7 +48,7 @@ export async function checkAvailability(
     const conflictingAppointments = appointments.filter(appointment => {
       const appointmentStart = new Date(appointment.datetime)
       const appointmentEnd = new Date(appointmentStart.getTime() + appointment.duration_minutes * 60000)
-      
+
       return hasTimeConflict(startTime, endTime, appointmentStart, appointmentEnd)
     })
 
@@ -80,7 +80,8 @@ export async function checkAvailability(
 export async function generateSuggestedSlots(
   collaboratorId: string,
   preferredTime: Date,
-  durationMinutes: number
+  durationMinutes: number,
+  serviceDurationMinutes?: number
 ): Promise<TimeSlot[]> {
   const slots: TimeSlot[] = []
   const dayStart = new Date(preferredTime)
@@ -105,15 +106,17 @@ export async function generateSuggestedSlots(
       return { start, end }
     })
 
+  // Gerar slots com base na duração do serviço, se fornecida
+  const slotDuration = serviceDurationMinutes ? serviceDurationMinutes : 30 * 60000;
   // Gerar slots de 30 minutos
-  const slotDuration = 30 * 60000 // 30 minutos em ms
+  //const slotDuration = 30 * 60000 // 30 minutos em ms
   let currentTime = new Date(dayStart)
 
   while (currentTime < dayEnd) {
     const slotEnd = new Date(currentTime.getTime() + durationMinutes * 60000)
-    
+
     if (slotEnd <= dayEnd) {
-      const isSlotAvailable = !busySlots.some(busySlot => 
+      const isSlotAvailable = !busySlots.some(busySlot =>
         hasTimeConflict(currentTime, slotEnd, busySlot.start, busySlot.end)
       )
 
@@ -138,7 +141,7 @@ export async function getCollaboratorWorkSchedule(
   // Por enquanto, retorna horário padrão (8h às 18h)
   // TODO: Implementar busca na tabela de horários de trabalho
   const dayOfWeek = date.getDay()
-  
+
   // Segunda a sexta (1-5)
   if (dayOfWeek >= 1 && dayOfWeek <= 5) {
     const start = new Date(date)
@@ -147,7 +150,7 @@ export async function getCollaboratorWorkSchedule(
     end.setHours(18, 0, 0, 0)
     return { start, end }
   }
-  
+
   return null
 }
 
@@ -157,7 +160,7 @@ export async function getCollaboratorSchedule(
   date: Date
 ): Promise<TimeSlot[]> {
   const slots: TimeSlot[] = []
-  
+
   // Obter horário de trabalho
   const workSchedule = await getCollaboratorWorkSchedule(collaboratorId, date)
   if (!workSchedule) return slots
@@ -184,7 +187,7 @@ export async function getCollaboratorSchedule(
 
   while (currentTime < workSchedule.end) {
     const slotEnd = new Date(currentTime.getTime() + 30 * 60000) // 30 minutos
-    
+
     // Verificar se há agendamento neste slot
     const appointment = dayAppointments.find(app => {
       const appStart = new Date(app.datetime)
@@ -220,7 +223,7 @@ export function formatTime(date: Date): string {
 export function formatDuration(minutes: number): string {
   const hours = Math.floor(minutes / 60)
   const mins = minutes % 60
-  
+
   if (hours > 0) {
     return `${hours}h${mins > 0 ? ` ${mins}min` : ''}`
   }

@@ -1,14 +1,14 @@
 export interface Appointment {
-  id: string
+  id?: string
   client_name: string
   service_id: string
   price: number
   collaborator_id: string
   datetime: string
   duration_minutes: number
-  status: 'AGENDADO' | 'CONCLUIDO' | 'CANCELADO' | 'NO_SHOW'
-  created_at: string
-  updated_at: string
+  status?: 'AGENDADO' | 'CONCLUIDO' | 'CANCELADO' | 'NO_SHOW'
+  created_at?: string
+  updated_at?: string
   client_id?: string
   notes?: string
   user_id?: string

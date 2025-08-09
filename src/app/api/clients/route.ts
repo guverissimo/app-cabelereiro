@@ -7,9 +7,27 @@ const clientSchema = z.object({
     client_phone: z.string()
 })
 
-export async function GET() {
-    const clients = await prisma.client.findMany()
-    return NextResponse.json(clients)
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const query = searchParams.get("q");
+
+  const clients = query
+    ? await prisma.client.findMany({
+        where: {
+          OR: [
+            { client_name: { contains: query, mode: "insensitive" } },
+            { client_phone: { contains: query, mode: "insensitive" } },
+          ],
+        },
+        take: 10,
+        orderBy: { client_name: "asc" },
+      })
+    : await prisma.client.findMany({
+        take: 10,
+        orderBy: { client_name: "asc" },
+      });
+
+  return NextResponse.json(clients);
 }
 
 export async function POST(req: NextRequest) {

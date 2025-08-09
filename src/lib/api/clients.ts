@@ -1,17 +1,24 @@
 import { Client } from "@/types/cliente";
 
-export const getClients = async () => {
+export const getClients = async (search?: string): Promise<Client[]> => {
+
     try {
-        const res = await fetch('/api/clients');
+        const queryParam = search?.trim() ? `?q=${encodeURIComponent(search)}` : "";
+        const res = await fetch(`/api/clients${queryParam}`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+        });
+
         if (!res.ok) {
-            const errorData = await res.json().catch(() => ({}))
-            console.error('Erro na API de clients:', res.status, errorData)
-            throw new Error(`Erro ao buscar clientes: ${res.status} - ${errorData.error || 'Erro desconhecido'}`)
+            throw new Error("Falha ao buscar clientes");   
         }
-        return await res.json();
+        const data = await res.json();
+        console.log(data);
+        
+        return data;
     } catch (error) {
-        console.error('Erro em getClients:', error);
-        throw error;
+        console.error("Erro em getClients:", error);
+        throw error instanceof Error ? error : new Error("Erro desconhecido");
     }
 };
 
@@ -30,23 +37,23 @@ export const getClientByPhone = async (client_phone: string) => {
 }
 
 export const createClient = async (data: Client) => {
-  try {
-    const res = await fetch('/api/clients', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
+    try {
+        const res = await fetch('/api/clients', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
 
-    if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(errorData?.error || 'Erro ao criar o cliente');
+        if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData?.error || 'Erro ao criar o cliente');
+        }
+
+        return await res.json();
+    } catch (error) {
+        console.error('Erro em createClient:', error);
+        throw error;
     }
-
-    return await res.json();
-  } catch (error) {
-    console.error('Erro em createClient:', error);
-    throw error;
-  }
 };
 
 export const updateClient = async (data: Partial<Client>) => {
