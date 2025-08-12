@@ -9,16 +9,16 @@ const inventoryUpdateSchema = z.object({
     last_updated: z.string().optional()
 })
 
-export async function PUT(
-    req: NextRequest,
-    { params }: { params: { id: string } }
-) {
+export async function PUT(req: NextRequest) {
     try {
+        const url = new URL(req.url);
+        const id = url.pathname.split('/').pop();
+
         const body = await req.json();
         const validatedData = inventoryUpdateSchema.parse(body);
 
         const inventory = await prisma.inventory.update({
-            where: { id: params.id },
+            where: { id },
             data: validatedData,
         });
 
@@ -42,13 +42,13 @@ export async function PUT(
     }
 }
 
-export async function DELETE(
-    req: NextRequest,
-    { params }: { params: { id: string } }
-) {
+export async function DELETE(req: NextRequest) {
     try {
+        const url = new URL(req.url);
+        const id = url.pathname.split('/').pop();
+
         await prisma.inventory.delete({
-            where: { id: params.id },
+            where: { id },
         });
 
         return NextResponse.json({ message: 'Produto deletado com sucesso' });
@@ -59,4 +59,4 @@ export async function DELETE(
             { status: 500 }
         );
     }
-} 
+}

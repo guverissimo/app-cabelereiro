@@ -11,16 +11,17 @@ const cashflowUpdateSchema = z.object({
     appointment_id: z.string().optional()
 })
 
-export async function PUT(
-    req: NextRequest,
-    { params }: { params: { id: string } }
-) {
+export async function PUT(req: NextRequest) {
     try {
         const body = await req.json();
         const validatedData = cashflowUpdateSchema.parse(body);
 
+        // Extrai o id da URL
+        const url = new URL(req.url);
+        const id = url.pathname.split('/').pop();
+
         const cashflow = await prisma.cashflow.update({
-            where: { id: params.id },
+            where: { id },
             data: validatedData,
         });
 
@@ -44,13 +45,14 @@ export async function PUT(
     }
 }
 
-export async function DELETE(
-    req: NextRequest,
-    { params }: { params: { id: string } }
-) {
+export async function DELETE(req: NextRequest) {
     try {
+        // Extrai o id da URL
+        const url = new URL(req.url);
+        const id = url.pathname.split('/').pop();
+
         await prisma.cashflow.delete({
-            where: { id: params.id },
+            where: { id },
         });
 
         return NextResponse.json({ message: 'Transação deletada com sucesso' });
@@ -61,4 +63,4 @@ export async function DELETE(
             { status: 500 }
         );
     }
-} 
+}

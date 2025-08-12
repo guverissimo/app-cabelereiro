@@ -30,7 +30,10 @@ export async function POST(req: NextRequest) {
         const validatedData = serviceSchema.parse(body);
 
         const service = await prisma.service.create({
-            data: validatedData,
+            data: {
+                ...validatedData,
+                description: validatedData.description ?? "", 
+            },
         });
 
         return NextResponse.json(service, { status: 201 });

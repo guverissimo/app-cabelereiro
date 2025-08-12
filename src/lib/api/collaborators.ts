@@ -1,5 +1,3 @@
-import { collaborator, collaboratorSchema } from "@/types/collaborator";
-
 export interface Collaborator {
     id: string;
     name: string;
@@ -52,7 +50,7 @@ export const updateCollaborator = async (id: string, data: Partial<Omit<Collabor
         }
 
         return await res.json();
-    } catch (error) {
+    } catch (error) {        
         throw new Error('Erro interno do servidor');
     }
 }

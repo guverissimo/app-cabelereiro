@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
         const collaboratorId = searchParams.get('collaborator_id');
         const date = searchParams.get('date');
 
-        let where: any = {};
+        const where: any = {};
 
         if (status) {
             where.status = status;
@@ -59,14 +59,23 @@ export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
         const validatedData = appointmentSchema.parse(body);
+        if (!validatedData.datetime) {
+            return NextResponse.json(
+                { error: 'O campo datetime é obrigatório.' },
+                { status: 400 }
+            );
+        }
 
         const appointment = await prisma.appointment.create({
-            data: validatedData,
+            data: {
+                ...validatedData,
+                datetime: validatedData.datetime as string, // garante que é string
+            },
             include: {
                 service: true,
                 collaborator: true,
-                client: true
-            }
+                client: true,
+            },
         });
 
         return NextResponse.json(appointment, { status: 201 });

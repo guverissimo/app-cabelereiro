@@ -15,16 +15,17 @@ const appointmentUpdateSchema = z.object({
     notes: z.string().optional()
 })
 
-export async function PUT(
-    req: NextRequest,
-    { params }: { params: { id: string } }
-) {
+export async function PUT(req: NextRequest) {
     try {
         const body = await req.json();
         const validatedData = appointmentUpdateSchema.parse(body);
 
+        // Extrai o id da URL
+        const url = new URL(req.url);
+        const id = url.pathname.split('/').pop();
+
         const appointment = await prisma.appointment.update({
-            where: { id: params.id },
+            where: { id },
             data: validatedData,
             include: {
                 service: true,
@@ -53,13 +54,14 @@ export async function PUT(
     }
 }
 
-export async function DELETE(
-    req: NextRequest,
-    { params }: { params: { id: string } }
-) {
+
+export async function DELETE(req: NextRequest) {
     try {
+        const url = new URL(req.url);
+        const id = url.pathname.split('/').pop();
+
         await prisma.appointment.delete({
-            where: { id: params.id },
+            where: { id },
         });
 
         return NextResponse.json({ message: 'Agendamento deletado com sucesso' });
@@ -70,4 +72,4 @@ export async function DELETE(
             { status: 500 }
         );
     }
-} 
+}

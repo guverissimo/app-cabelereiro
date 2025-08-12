@@ -9,11 +9,11 @@ const collaboratorUpdateSchema = z.object({
 });
 
 export async function PUT(
-    req: NextRequest,
-    { params }: { params: { id: string } }
+    req: NextRequest
 ) {
     try {
-        const collaboratorId = params.id;
+        const url = new URL(req.url);
+        const collaboratorId = url.pathname.split('/').pop();
         const body = await req.json();
 
         const validatedData = collaboratorUpdateSchema.parse(body);
@@ -52,12 +52,11 @@ export async function PUT(
     }
 }
 
-export async function DELETE(
-    req: NextRequest,
-    { params }: { params: { id: string } }
-) {
+export async function DELETE(req: NextRequest) {
     try {
-        const collaboratorId = params.id;
+        // Extrai o id da URL
+        const url = new URL(req.url);
+        const collaboratorId = url.pathname.split('/').pop();
 
         const existingCollaborator = await prisma.collaborator.findUnique({
             where: { id: collaboratorId }

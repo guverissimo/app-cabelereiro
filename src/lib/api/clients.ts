@@ -1,5 +1,8 @@
-import { Client } from "@/types/cliente";
-
+export type Client = {
+    id: string
+    client_name: string
+    client_phone?: string
+}
 export const getClients = async (search?: string): Promise<Client[]> => {
 
     try {
@@ -10,11 +13,11 @@ export const getClients = async (search?: string): Promise<Client[]> => {
         });
 
         if (!res.ok) {
-            throw new Error("Falha ao buscar clientes");   
+            throw new Error("Falha ao buscar clientes");
         }
         const data = await res.json();
         console.log(data);
-        
+
         return data;
     } catch (error) {
         console.error("Erro em getClients:", error);
